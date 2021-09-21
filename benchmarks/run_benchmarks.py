@@ -1,5 +1,6 @@
 import datetime
 import os
+import subprocess
 
 
 class Benchmark:
@@ -29,10 +30,9 @@ if __name__ == "__main__":
         os.chdir(sub_dir_name)
         num_lines_before = count_file_lines("Main.c")
 
-        predicate_path = os.path.join(sub_dir, "Predicate.sh")
-        exit_code = os.system(f"creduce ./Predicate.sh Main.c")
-        if exit_code != 0:
-            print(f"test in directory '{sub_dir_name}' returned exit code {exit_code}")
+        result = subprocess.run([f"creduce", "./Predicate.sh", "Main.c"], stdout=subprocess.PIPE)
+        if result.returncode != 0:
+            print(f"test in directory '{sub_dir_name}' returned exit code {result.returncode}")
             continue
 
         num_lines_after = count_file_lines("Main.c")
