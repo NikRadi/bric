@@ -1,0 +1,8 @@
+# Files
+build.sh    # Temporary file
+*.swp       # vim
+
+# Folders
+lib/        # Temporarily ignored
+src/tree-sitter-c/
+
