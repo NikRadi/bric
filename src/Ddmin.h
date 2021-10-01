@@ -4,6 +4,6 @@
 #include "List.h"
 
 
-void Ddmin(List *units, char *run_predicate_command, AstNode *root_node, char *file_name, char *source_code);
+void Ddmin(List *units, char *run_predicate_command, AstNode *root_node, char *file_name);
 
 #endif // BRIC_DDMIN_H

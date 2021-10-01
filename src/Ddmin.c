@@ -1,9 +1,16 @@
 #include "Ddmin.h"
+#include "StringManipulation.h"
+
+
+#define DDMIN_DEBUG 0
+#if DDMIN_DEBUG == 0
+    #define printf(x, ...)
+#endif
 
 
 static char *file_name = NULL;
-static char *source_code = NULL;
 static char *run_predicate_command = NULL;
+static int total_tests = 0;
 static List *original_units;
 static AstNode *root_node = NULL;
 
@@ -46,13 +53,12 @@ static List *TestPartitions(List *partitions, bool default_is_ignored_value) {
     for (int i = 0; i < partitions->count; ++i) {
         List *partition = (List *) ListGet(partitions, i);
         SetAstNodesIsIgnoredValues(partition, !default_is_ignored_value);
-        printf("Testing partition (set to %d): ", !default_is_ignored_value);
-        PrintNodesInPartition(partition);
+        total_tests += 1;
+        printf("Test %d: ", total_tests);
         PrintNodesInPartition(original_units);
-        printf("\n");
 
         File file = OpenFile(file_name, "w+");
-        AstWriteLeafNodesToFile(root_node, file, source_code);
+        AstWriteLeafNodesToFile(root_node, file);
         CloseFile(file);
         int return_code = system(run_predicate_command);
         if (return_code == 0) {
@@ -66,10 +72,6 @@ static List *TestPartitions(List *partitions, bool default_is_ignored_value) {
 }
 
 static void DdminRecursion(List *units, int num_partitions) {
-    printf("\n====\n\n");
-    printf("units->count: %d\n", units->count);
-    printf("num_partitions: %d\n", num_partitions);
-
     printf("Testing subsets\n");
     List partitions = ListPartition(units, num_partitions);
     SetPartitionsIsIgnoredValues(&partitions, true);
@@ -109,16 +111,25 @@ static void DdminRecursion(List *units, int num_partitions) {
     SetAstNodesIsIgnoredValues(units, false);
     PrintNodesInPartition(original_units);
     File file = OpenFile(file_name, "w+");
-    AstWriteLeafNodesToFile(root_node, file, source_code);
+    AstWriteLeafNodesToFile(root_node, file);
     CloseFile(file);
     printf("done\n");
 }
 
-void Ddmin(List *units, char *_run_predicate_command, AstNode *_root_node, char *_file_name, char *_source_code) {
+void Ddmin(List *units, char *_run_predicate_command, AstNode *_root_node, char *_file_name) {
     file_name = _file_name;
-    source_code = _source_code;
-    run_predicate_command = _run_predicate_command;
     root_node = _root_node;
     original_units = units;
+
+#if DDMIN_DEBUG == 0
+    run_predicate_command = AddPostfix(_run_predicate_command, ">/dev/null");
+#else
+    run_predicate_command = _run_predicate_command;
+#endif
+
     DdminRecursion(units, 2);
+
+#if DDMIN_DEBUG == 0
+    free(run_predicate_command);
+#endif
 }

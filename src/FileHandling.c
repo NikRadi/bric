@@ -1,6 +1,6 @@
 #include "FileHandling.h"
 #include "ErrorPrinting.h"
-#include <stdlib.h> // malloc
+#include <stdlib.h> // malloc, free
 
 
 File OpenFile(char *file_name, char *mode) {

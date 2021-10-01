@@ -1,6 +1,7 @@
 # Files
 build.sh    # Temporary file
 *.swp       # vim
+*.out
 
 # Folders
 lib/        # Temporarily ignored

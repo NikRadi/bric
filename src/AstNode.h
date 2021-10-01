@@ -8,8 +8,8 @@
 
 struct AstNode {
     TSNode ts_node;
-    const char *type;
-    const char *value;
+    char *type;
+    char *value;
     uint32_t start_byte;
     uint32_t end_byte;
     List children;
@@ -21,7 +21,7 @@ AstNode *AstInit(TSNode ts_node, char *source_code);
 
 void AstPrint(AstNode *node);
 
-void AstWriteLeafNodesToFile(AstNode *node, File file, char *source_code);
+void AstWriteLeafNodesToFile(AstNode *node, File file);
 
 void AstFindAllNodesOfType(AstNode *node, List *list, const char *type);
 

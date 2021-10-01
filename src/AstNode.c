@@ -25,13 +25,13 @@ static void PrintIndented(const char *format, ...) {
 
 static void PrintStartSection(AstNode *node) {
     char *is_ignored_str = (node->is_ignored) ? "true" : "false";
-    PrintIndented("<%s is_ignored=\"%s\">", node->type, is_ignored_str);    
+    PrintIndented("<%s is_ignored=\"%s\">", node->type, is_ignored_str);
     indent += INDENT_AMOUNT;
 }
 
 static void PrintEndSection(const char *node_type) {
     indent -= INDENT_AMOUNT;
-    PrintIndented("<%s/>", node_type);    
+    PrintIndented("<%s/>", node_type);
 }
 
 static bool TSNodeIsType(TSNode node, const char *type) {
@@ -79,7 +79,8 @@ static void WriteAstLeafNodesToFileRecursively(AstNode *node, File file, char *s
 static AstNode *NewAstNode(TSNode ts_node, char *source_code) {
     AstNode *ast_node = NEW(AstNode);
     ast_node->ts_node = ts_node;
-    ast_node->type = ts_node_type(ts_node);
+    const char *node_type = ts_node_type(ts_node);
+    ast_node->type = strdup(node_type);
     ast_node->children = ListInit();
     ast_node->is_ignored = false;
 
@@ -95,7 +96,7 @@ AstNode *AstInit(TSNode ts_node, char *source_code) {
     // For our use case, it makes better sense that 'string_literal'
     // types are leaves. Therefore, we ignore the children of
     // 'string_literal' types.
-    if (!TSNodeIsType(ts_node, "string_literal")) { 
+    if (!TSNodeIsType(ts_node, "string_literal")) {
         for (int i = 0; i < ts_node_child_count(ts_node); ++i) {
             TSNode ts_child_node = ts_node_child(ts_node, i);
             AstNode *child_node = AstInit(ts_child_node, source_code);
@@ -117,8 +118,8 @@ void AstPrint(AstNode *node) {
     PrintEndSection(node->type);
 }
 
-void AstWriteLeafNodesToFile(AstNode *node, File file, char *source_code) {
-    WriteAstLeafNodesToFileRecursively(node, file, source_code);
+void AstWriteLeafNodesToFile(AstNode *node, File file) {
+    WriteAstLeafNodesToFileRecursively(node, file, node->value);
     fputs("\n", file.stream);
 }
 

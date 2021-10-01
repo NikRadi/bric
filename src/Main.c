@@ -4,6 +4,8 @@
 #include "Ddmin.h"
 #include "FileHandling.h"
 #include "List.h"
+#include "StringManipulation.h"
+#include "TimeMeasure.h"
 
 
 TSLanguage *tree_sitter_c();
@@ -12,21 +14,8 @@ static const char *USAGE_STR =
     "bric predicate_file file_to_reduce\n";
 
 
-static char *AddPrefix(const char *prefix, const char *str) {
-    int str_len = strlen(str);
-    int prefix_len = strlen(prefix);
-    int result_len = str_len + prefix_len;
-    char *result = (char *) malloc(result_len * sizeof(char));
-    strncpy(result, prefix, prefix_len);
-    strncpy(result + prefix_len, str, str_len);
-    return result;
-}
-
-static char *AddPostfix(const char *str, const char *postfix) {
-    return AddPrefix(str, postfix);
-}
-
 int main(int argc, char **argv) {
+    StartMeasuringTime();
     if (argc != 3) {
         printf("%s\n", USAGE_STR);
         return 0;
@@ -45,6 +34,7 @@ int main(int argc, char **argv) {
     ts_parser_set_language(parser, tree_sitter_c());
     TSTree *tree = ts_parser_parse_string(parser, NULL, c_file_text, strlen(c_file_text));
     TSNode ts_root_node = ts_tree_root_node(tree);
+    PrintSecondsElapsed("Finished parsing '%s'", c_file_name);
 
     //
     // TEST START
@@ -53,7 +43,9 @@ int main(int argc, char **argv) {
     AstNode *root_node = AstInit(ts_root_node, c_file_text);
     List units = ListInit();
     AstFindAllNodesOfType(root_node, &units, "expression_statement");
-    Ddmin(&units, run_predicate_command, root_node, c_file_name, c_file_text);
+    PrintSecondsElapsed("Finished analyzing");
+    Ddmin(&units, run_predicate_command, root_node, c_file_name);
+    PrintSecondsElapsed("Finished ddmin");
     SwitchFileContents(c_file_name, reduced_c_file_name);
     ListDelete(&units);
 
@@ -61,7 +53,12 @@ int main(int argc, char **argv) {
     // TEST END
     //
 
+    PrintSecondsElapsed("Done. Output in '%s'", reduced_c_file_name);
     free(run_predicate_command);
     free(c_file_text);
+    free(c_file_name_without_extension);
+    free(reduced_c_file_name);
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
     return 0;
 }
