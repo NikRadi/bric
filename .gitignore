@@ -6,4 +6,5 @@ build.sh    # Temporary file
 # Folders
 lib/        # Temporarily ignored
 src/tree-sitter-c/
+src/tree-sitter-java/
 
