@@ -16,7 +16,6 @@ struct Ast {
 
 struct Leaf : public Ast {
     bool is_active = true;
-    bool is_mergeable = false;
     uint start_byte;
     uint end_byte;
     Leaf *next_leaf = NULL;

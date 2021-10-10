@@ -10,15 +10,15 @@ static void PrintAst(Ast *node) {
     if (node->type == AST_LEAF)  {
         for (int i = 0; i < indent; ++i) printf(" ");
         Leaf *l = (Leaf *) node;
-        printf("<Leaf is_active=\"%d\" is_mergeable=\"%d\" value=\"%s\"/>\n", l->is_active, l->is_mergeable, l->value.c_str());
+        printf("<Leaf is_active=\"%d\" value=\"%s\"/>\n", l->is_active, l->value.c_str());
     }
     else if (node->type == AST_BRANCH) {
-        Branch *branch = (Branch *) node;
+        Branch *b = (Branch *) node;
         for (int i = 0; i < indent; ++i) printf(" ");
-        printf("<Branch type=\"%s\">\n", ts_node_type(branch->ts_node));
+        printf("<Branch type=\"%s\">\n", ts_node_type(b->ts_node));
         indent += 4;
-        for (int i = 0; i < branch->children.size(); ++i) {
-            PrintAst(branch->children[i]);
+        for (int i = 0; i < b->children.size(); ++i) {
+            PrintAst(b->children[i]);
         }
 
         indent -= 4;
@@ -90,12 +90,7 @@ static Ast *MakeAst(Tree &tree, TSNode ts_node, std::string source_code, Leaf **
         uint start_byte = ts_node_start_byte(ts_node);
         uint end_byte = ts_node_end_byte(ts_node);
         std::string value = strndup(source_code.c_str() + start_byte, end_byte - start_byte);
-        Leaf *leaf = LeafInit(ts_node, value, *prev_leaf);
-        if (leaf != NULL) {
-            leaf->is_mergeable = !ts_node_is_named(ts_node);
-        }
-
-        return (Ast *) leaf;
+        return (Ast *) LeafInit(ts_node, value, *prev_leaf);
     }
 
     if (child_count == 1) {
@@ -106,8 +101,6 @@ static Ast *MakeAst(Tree &tree, TSNode ts_node, std::string source_code, Leaf **
     }
 
     std::vector<Ast *> children;
-    bool are_all_children_leaves = true;
-    int num_non_mergeable_leaves = 0;
     for (int i = 0; i < child_count; ++i) {
         TSNode ts_child = ts_node_child(ts_node, i);
         Ast *child = MakeAst(tree, ts_child, source_code, prev_leaf);
@@ -119,22 +112,7 @@ static Ast *MakeAst(Tree &tree, TSNode ts_node, std::string source_code, Leaf **
         if (child->type == AST_LEAF) {
             Leaf *leaf = (Leaf *) child;
             *prev_leaf = leaf;
-            if (!leaf->is_mergeable) num_non_mergeable_leaves += 1;
         }
-        else are_all_children_leaves = false;
-    }
-
-    if (are_all_children_leaves && num_non_mergeable_leaves <= 2) {
-        Leaf *first_leaf = (Leaf *) children[0];
-        Leaf *last_leaf = (Leaf *) children[children.size() - 1];
-        uint start_byte = first_leaf->start_byte;
-        uint end_byte = last_leaf->end_byte;
-        std::string value = strndup(source_code.c_str() + start_byte, end_byte - start_byte);
-        Leaf *leaf = LeafInit(ts_node, value, first_leaf->prev_leaf);
-        leaf->start_byte = start_byte;
-        leaf->end_byte = end_byte;
-        leaf->is_mergeable = num_non_mergeable_leaves == 0;
-        return (Ast *) leaf;
     }
 
     Branch *branch = new Branch(ts_node);
@@ -197,10 +175,8 @@ void TreeWriteToFile(Tree &self, std::string file_name, std::string mode) {
     leaf = leaf->next_leaf;
     while (leaf != NULL) {
         if (leaf->is_active) {
-            //uint start_byte = leaf->prev_leaf->end_byte;
-            //uint end_byte = leaf->start_byte;
-            uint start_byte = last_active_leaf->end_byte;
-            uint end_byte = last_active_leaf->next_leaf->start_byte;
+            uint start_byte = leaf->prev_leaf->end_byte;
+            uint end_byte = leaf->start_byte;
             uint bytes_to_copy = end_byte - start_byte;
             if (bytes_to_copy > 0) {
                 const char *str_start = self.source_code.c_str() + start_byte;

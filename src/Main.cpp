@@ -17,7 +17,6 @@ struct Args {
 };
 
 extern "C" TSLanguage *tree_sitter_c();
-extern "C" TSLanguage *tree_sitter_java();
 const std::string HELP =
     "bric usage:\n"
     "bric c_file predicate [arguments]\n"
@@ -80,20 +79,22 @@ int main(int argc, char **argv) {
     WriteAndReplaceFile(reduced_c_file_name, c_file_content);
 
     TSParser *parser = ts_parser_new();
-    ts_parser_set_language(parser, tree_sitter_java());
+    ts_parser_set_language(parser, tree_sitter_c());
     TSTree *ts_tree = ts_parser_parse_string(parser, NULL, c_file_content.c_str(), c_file_content.size());
     TSNode ts_root_node = ts_tree_root_node(ts_tree);
 
     Tree tree = TreeInit(ts_root_node, c_file_content);
+    std::vector<Ast *> units;
+    TreeFindNodes(tree, units, "expression_statement");
+    printf("Added expression_statement . Total %ld nodes\n", units.size());
     switch (args.algorithm) {
-        case ALGO_DDMIN: { Ddmin(tree, tree.leaves, run_predicate_command, args.c_file_name); } break;
+        case ALGO_DDMIN: { Ddmin(tree, units, run_predicate_command, args.c_file_name); } break;
         case ALGO_BINARY_REDUCTION: { printf("Not implemented\n"); } break;
         default: { printf("Unknown algorithm option\n"); } break;
     }
 
     SwitchFileContents(args.c_file_name, reduced_c_file_name);
     printf("Done. Result in '%s'\n", reduced_c_file_name.c_str());
-    TreePrint(tree);
     TreeDelete(tree);
     return 0;
 }
