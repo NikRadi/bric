@@ -40,6 +40,10 @@ struct Tree {
 };
 
 
+void SetIsActive(std::vector<Ast *> &units, bool is_active);
+
+void SetIsActive(std::vector<std::vector<Ast *>> &units, bool is_active);
+
 Tree TreeInit(TSNode ts_node, std::string source_code);
 
 void TreeDelete(Tree &self);

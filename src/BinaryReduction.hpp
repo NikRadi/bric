@@ -5,6 +5,6 @@
 #include <vector>
 
 
-void BinaryReduction(Tree &tree, std::vector<Ast *> units, std::string run_predicate_command, std::string file_name);
+void BinaryReduction(Tree &tree, std::string unit_ts_type, std::string run_predicate_command, std::string file_name);
 
 #endif // BRIC_BINARY_REDUCTION_HPP

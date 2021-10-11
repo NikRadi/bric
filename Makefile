@@ -13,5 +13,6 @@ all:
 clean:
 	rm -f $(NAME)
 	rm -f parser.o
+	rm -f Test.c
 	rm -f Test_reduced.c
 	rm -f a.out

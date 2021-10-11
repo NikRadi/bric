@@ -8,7 +8,7 @@
 static Tree tree;
 static std::string run_predicate_command;
 static std::string file_name;
-static std::vector<Ast *> starting_units;
+static int num_tests = 0;
 
 
 static void Print(Ast *node) {
@@ -81,34 +81,10 @@ static std::vector<Ast *> Flatten(std::vector<std::vector<Ast *>> partitions) {
     return result;
 }
 
-static void SetIsActive(std::vector<Ast *> &partition, bool is_active) {
-    for (size_t i = 0; i < partition.size(); ++i) {
-        Ast *node = partition[i];
-        if (node->type == AST_LEAF) {
-            Leaf *leaf = (Leaf *) node;
-            leaf->is_active = is_active;
-        }
-        else {
-            Branch *branch = (Branch *) node;
-            Leaf *leaf = branch->leftmost_leaf;
-            while (leaf != branch->rightmost_leaf) {
-                leaf->is_active = is_active;
-                leaf = leaf->next_leaf;
-            }
-
-            leaf->is_active = is_active;
-        }
-    }
-}
-
-static void SetIsActive(std::vector<std::vector<Ast *>> &partitions, bool is_active) {
-    for (size_t i = 0; i < partitions.size(); ++i) {
-        SetIsActive(partitions[i], is_active);
-    }
-}
-
 static int TestPartitions(std::vector<std::vector<Ast *>> partitions, bool default_is_active) {
     for (size_t i = 0; i < partitions.size(); ++i) {
+        printf("Test %d\n", num_tests);
+        num_tests += 1;
         SetIsActive(partitions[i], !default_is_active);
         TreeWriteToFile(tree, file_name, "w");
         int return_code = system(run_predicate_command.c_str());
@@ -161,10 +137,13 @@ static void Ddmin(std::vector<Ast *> units, int num_partitions) {
     TreeWriteToFile(tree, file_name, "w");
 }
 
-void Ddmin(Tree &_tree, std::vector<Ast *> units, std::string _run_predicate_command, std::string _file_name) {
+void Ddmin(Tree &_tree, std::string unit_ts_type, std::string _run_predicate_command, std::string _file_name) {
     tree = _tree;
     run_predicate_command = _run_predicate_command;
     file_name = _file_name;
-    starting_units = units;
+
+    std::vector<Ast *> units;
+    TreeFindNodes(tree, units, unit_ts_type);
+    printf("Found %ld units\n", units.size());
     Ddmin(units, 2);
 }

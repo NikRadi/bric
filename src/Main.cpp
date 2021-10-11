@@ -71,7 +71,6 @@ int main(int argc, char **argv) {
 
     printf("File to reduce:     %s\n", args.c_file_name.c_str());
     printf("Predicate:          %s\n", args.predicate_file_name.c_str());
-    printf("%d\n", args.algorithm_type);
     printf("Algorithm:          %s\n", ToStr(args.algorithm_type).c_str());
     printf("\n");
 
@@ -93,12 +92,9 @@ int main(int argc, char **argv) {
     TSNode ts_root_node = ts_tree_root_node(ts_tree);
 
     Tree tree = TreeInit(ts_root_node, c_file_content);
-    std::vector<Ast *> units;
-    TreeFindNodes(tree, units, "function_definition");
-    printf("Total %ld nodes\n", units.size());
     switch (args.algorithm_type) {
-        case ALGO_DDMIN:            { Ddmin(tree, units, run_predicate_command, args.c_file_name); } break;
-        case ALGO_BINARY_REDUCTION: { BinaryReduction(tree, units, run_predicate_command, args.c_file_name); } break;
+        case ALGO_DDMIN:            { Ddmin(tree, "function_definition", run_predicate_command, args.c_file_name); } break;
+        case ALGO_BINARY_REDUCTION: { BinaryReduction(tree, "function_definition", run_predicate_command, args.c_file_name); } break;
         case ALGO_HDD:              { ShowWarning("not implemented"); } break;
         default:                    { printf("Unknown algorithm option\n"); } break;
     }

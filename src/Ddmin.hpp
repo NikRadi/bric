@@ -5,6 +5,6 @@
 #include <vector>
 
 
-void Ddmin(Tree &tree, std::vector<Ast *> units, std::string run_predicate_command, std::string file_name);
+void Ddmin(Tree &tree, std::string unit_ts_type, std::string run_predicate_command, std::string file_name);
 
 #endif // BRIC_DDMIN_HPP

@@ -96,6 +96,32 @@ static Ast *MakeAst(Tree &tree, TSNode ts_node, Leaf **prev_leaf) {
     return (Ast *) branch;
 }
 
+void SetIsActive(std::vector<Ast *> &units, bool is_active) {
+    for (size_t i = 0; i < units.size(); ++i) {
+        Ast *node = units[i];
+        if (node->type == AST_LEAF) {
+            Leaf *leaf = (Leaf *) node;
+            leaf->is_active = is_active;
+        }
+        else {
+            Branch *branch = (Branch *) node;
+            Leaf *leaf = branch->leftmost_leaf;
+            while (leaf != branch->rightmost_leaf) {
+                leaf->is_active = is_active;
+                leaf = leaf->next_leaf;
+            }
+
+            leaf->is_active = is_active;
+        }
+    }
+}
+
+void SetIsActive(std::vector<std::vector<Ast *>> &units, bool is_active) {
+    for (size_t i = 0; i < units.size(); ++i) {
+        SetIsActive(units[i], is_active);
+    }
+}
+
 Tree TreeInit(TSNode ts_node, std::string source_code) {
     Tree self;
     self.source_code = source_code;
