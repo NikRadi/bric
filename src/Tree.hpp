@@ -5,6 +5,9 @@
 #include <vector>
 
 
+struct Branch;
+
+
 enum AstType {
     AST_BRANCH, AST_LEAF,
 };
@@ -16,9 +19,6 @@ struct Ast {
 
 struct Leaf : public Ast {
     bool is_active = true;
-    bool is_mergeable = false;
-    uint start_byte;
-    uint end_byte;
     Leaf *next_leaf = NULL;
     Leaf *prev_leaf = NULL;
     std::string value;
@@ -37,7 +37,6 @@ struct Branch : public Ast {
 struct Tree {
     Branch *root_node = NULL;
     std::string source_code;
-    std::vector<Ast *> leaves;
 };
 
 

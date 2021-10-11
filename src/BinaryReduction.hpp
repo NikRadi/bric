@@ -1,6 +1,10 @@
 #ifndef BRIC_BINARY_REDUCTION_HPP
 #define BRIC_BINARY_REDUCTION_HPP
-// To find dependencies
-// Have a list of identifiers
-// if that identifier shows up anywhere except the place it was added to the list then it is a dependency
+#include "Tree.hpp"
+#include <string>
+#include <vector>
+
+
+void BinaryReduction(Tree &tree, std::vector<Ast *> units, std::string run_predicate_command, std::string file_name);
+
 #endif // BRIC_BINARY_REDUCTION_HPP

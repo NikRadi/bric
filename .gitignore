@@ -1,10 +1,15 @@
 # Files
-build.sh    # Temporary file
-*.swp       # vim
+bric
+*.c
+*.o
 *.out
+*.sh
+
+# vim temporary files
+*.swp
 
 # Folders
-lib/        # Temporarily ignored
+# temporarily ignored
+lib/
 src/tree-sitter-c/
 src/tree-sitter-java/
-

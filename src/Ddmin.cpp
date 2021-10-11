@@ -1,9 +1,8 @@
 #include "Ddmin.hpp"
 #include "FileHandling.hpp"
-#include <algorithm>
+#include <algorithm> // max, min
 #include <assert.h>
 #include <stdio.h>
-#include <string>
 
 
 static Tree tree;
@@ -36,7 +35,7 @@ static void Print(std::vector<Ast *> nodes) {
     printf("[");
     if (nodes.size() > 0) {
         Print(nodes[0]);
-        for (int i = 1; i < nodes.size(); ++i) {
+        for (size_t i = 1; i < nodes.size(); ++i) {
             printf(", ");
             Print(nodes[i]);
         }
@@ -74,7 +73,7 @@ static std::vector<std::vector<Ast *>> PartitionUnits(std::vector<Ast *> units, 
 
 static std::vector<Ast *> Flatten(std::vector<std::vector<Ast *>> partitions) {
     std::vector<Ast *> result;
-    for (int i = 0; i < partitions.size(); ++i) {
+    for (size_t i = 0; i < partitions.size(); ++i) {
         std::vector<Ast *> partition = partitions[i];
         result.insert(result.end(), partition.begin(), partition.end());
     }
@@ -83,7 +82,7 @@ static std::vector<Ast *> Flatten(std::vector<std::vector<Ast *>> partitions) {
 }
 
 static void SetIsActive(std::vector<Ast *> &partition, bool is_active) {
-    for (int i = 0; i < partition.size(); ++i) {
+    for (size_t i = 0; i < partition.size(); ++i) {
         Ast *node = partition[i];
         if (node->type == AST_LEAF) {
             Leaf *leaf = (Leaf *) node;
@@ -103,18 +102,18 @@ static void SetIsActive(std::vector<Ast *> &partition, bool is_active) {
 }
 
 static void SetIsActive(std::vector<std::vector<Ast *>> &partitions, bool is_active) {
-    for (int i = 0; i < partitions.size(); ++i) {
+    for (size_t i = 0; i < partitions.size(); ++i) {
         SetIsActive(partitions[i], is_active);
     }
 }
 
 static int TestPartitions(std::vector<std::vector<Ast *>> partitions, bool default_is_active) {
-    for (int i = 0; i < partitions.size(); ++i) {
+    for (size_t i = 0; i < partitions.size(); ++i) {
         SetIsActive(partitions[i], !default_is_active);
         TreeWriteToFile(tree, file_name, "w");
         int return_code = system(run_predicate_command.c_str());
         if (return_code == 0) {
-            printf("Success on partition %d\n", i);
+            printf("Success on partition %ld\n", i);
             return i;
         }
 
@@ -152,7 +151,7 @@ static void Ddmin(std::vector<Ast *> units, int num_partitions) {
         }
     }
 
-    if (num_partitions < units.size()) {
+    if (static_cast<size_t>(num_partitions) < units.size()) {
         printf("Increasing granularity\n");
         Ddmin(units, std::min((int) units.size(), 2 * num_partitions));
         return;

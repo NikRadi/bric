@@ -4,8 +4,9 @@ NAME=bric
 
 
 all:
-	gcc $(CFLAGS) -c src/tree-sitter-java/src/parser.c
-	g++ $(CFLAGS) src/*.cpp parser.o $(LIBS) -o $(NAME)
+	cp Test.save.c Test.c
+	gcc $(CFLAGS) -c src/tree-sitter-c/src/parser.c
+	g++ $(CFLAGS) -Wall src/*.cpp parser.o $(LIBS) -o $(NAME)
 
 
 .PHONE: clean
