@@ -9,10 +9,18 @@ all:
 	g++ $(CFLAGS) -Wall src/*.cpp parser.o $(LIBS) -o $(NAME)
 
 
+.PHONE: run
+run:
+	cp Test.save.c Test.c
+	clear
+	make
+	./bric
+
+
 .PHONE: clean
 clean:
 	rm -f $(NAME)
 	rm -f parser.o
 	rm -f Test.c
-	rm -f Test_reduced.c
+	rm -f reduced_Test.c
 	rm -f a.out

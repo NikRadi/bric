@@ -1,10 +1,9 @@
 #ifndef BRIC_BINARY_REDUCTION_HPP
 #define BRIC_BINARY_REDUCTION_HPP
-#include "Tree.hpp"
-#include <string>
+#include "AlgorithmGeneral.hpp"
 #include <vector>
 
 
-void BinaryReduction(Tree &tree, std::string unit_ts_type, std::string run_predicate_command, std::string file_name);
+void BinaryReduction(AlgorithmParams params, std::vector<Ast **> units, std::vector<Unit> &removed_units);
 
 #endif // BRIC_BINARY_REDUCTION_HPP
