@@ -17,6 +17,8 @@ struct Unit {
 };
 
 
+std::vector<Unit> ToUnits(std::vector<Ast **> asts);
+
 std::vector<std::vector<Unit>> Partition(std::vector<Unit> units, size_t num_partitions);
 
 void Enable(std::vector<Unit> partition);

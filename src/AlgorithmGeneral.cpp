@@ -1,6 +1,19 @@
 #include "AlgorithmGeneral.hpp"
 
 
+std::vector<Unit> ToUnits(std::vector<Ast **> asts) {
+    std::vector<Unit> units;
+    for (size_t i = 0; i < asts.size(); ++i) {
+        Unit unit;
+        unit.ast_value = *asts[i];
+        unit.ast_in_tree = asts[i];
+
+        units.push_back(unit);
+    }
+
+    return units;
+}
+
 std::vector<std::vector<Unit>> Partition(std::vector<Unit> units, size_t num_partitions) {
     std::vector<std::vector<Unit>> partitions;
     std::vector<size_t> num_items_in_partition(num_partitions, 0);

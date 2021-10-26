@@ -1,8 +1,22 @@
 #include "Ddmin.hpp"
 #include <algorithm> // min, max
+#include <cassert>
 
 
 static void Ddmin(AlgorithmParams params, std::vector<Unit> units, std::vector<Unit> &removed_units, size_t num_partitions) {
+    if (units.size() == 1) {
+        Disable(units);
+        TreeWriteToFile(params.tree, params.c_file_name);
+        if (system(params.run_predicate.c_str()) == 0) {
+            removed_units.push_back(units[0]);
+        }
+        else {
+            Enable(units);
+        }
+
+        return;
+    }
+
     std::vector<std::vector<Unit>> partitions = Partition(units, num_partitions);
     for (size_t i = 0; i < partitions.size(); ++i) {
         Disable(partitions[i]);
@@ -18,15 +32,12 @@ static void Ddmin(AlgorithmParams params, std::vector<Unit> units, std::vector<U
                 removed_units.insert(removed_units.end(), partitions[j].begin(), partitions[j].end());
             }
 
-            j += 1;
+            j += 1; // Skip partitions[i] since it is not removed
             for (; j < partitions.size(); ++j) {
                 removed_units.insert(removed_units.end(), partitions[j].begin(), partitions[j].end());
             }
 
-            if (partitions[i].size() > 1) {
-                Ddmin(params, removed_units, partitions[i], 2);
-            }
-
+            Ddmin(params, partitions[i], removed_units, 2);
             return;
         }
 
@@ -49,7 +60,7 @@ static void Ddmin(AlgorithmParams params, std::vector<Unit> units, std::vector<U
                     new_units.insert(new_units.end(), partitions[j].begin(), partitions[j].end());
                 }
 
-                j += 1;
+                j += 1; // Skip partitions[i] since it is removed
                 for (; j < partitions.size(); ++j) {
                     new_units.insert(new_units.end(), partitions[j].begin(), partitions[j].end());
                 }
@@ -72,14 +83,7 @@ static void Ddmin(AlgorithmParams params, std::vector<Unit> units, std::vector<U
 }
 
 void Ddmin(AlgorithmParams params, std::vector<Ast **> units, std::vector<Unit> &removed_units) {
-    std::vector<Unit> ast_units;
-    for (size_t i = 0; i < units.size(); ++i) {
-        Unit unit;
-        unit.ast_value = *units[i];
-        unit.ast_in_tree = units[i];
-
-        ast_units.push_back(unit);
-    }
-
+    assert(units.size() > 0);
+    std::vector<Unit> ast_units = ToUnits(units);
     Ddmin(params, ast_units, removed_units, 2);
 }

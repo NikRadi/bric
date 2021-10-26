@@ -56,15 +56,13 @@ int main(int argc, char **argv) {
     params.tree = tree;
 
     std::vector<Ast **> units;
-    TreeFindUnits(tree, units, "function_definition");
+    TreeFindUnits(tree, units, "if_statement");
     std::vector<Unit> removed_units;
 
-//    PrintWithTime("running ddmin");
 //    Ddmin(params, units, removed_units);
-//    PrintWithTime("running hdd");
-    HddWithBinaryReduction(params);
-//    PrintWithTime("running binary reduction");
     BinaryReduction(params, units, removed_units);
+//    Hdd(params);
+//    HddWithBinaryReduction(params);
     Enable(removed_units);
 
     std::string reduced_source_code = ReadFile(c_file_name);

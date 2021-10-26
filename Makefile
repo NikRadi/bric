@@ -24,3 +24,4 @@ clean:
 	rm -f Test.c
 	rm -f reduced_Test.c
 	rm -f a.out
+	rm -f out.txt
