@@ -87,7 +87,65 @@ static void AstWriteToFile(Ast *self, std::string source_code, std::ofstream &of
     }
 }
 
-static void AstPrintXml(Ast *self) {
+static void AstFindUnitsInEachLevel(Ast **self, std::vector<std::vector<Unit>> &units_in_each_level, int current_level) {
+    Unit unit = ToUnit(self);
+    units_in_each_level[current_level].push_back(unit);
+    if ((*self)->type == AST_BRANCH) {
+        std::vector<Unit> units_in_next_level;
+        units_in_each_level.push_back(units_in_next_level);
+        Branch *branch = static_cast<Branch *>(*self);
+        for (size_t i = 0; i < branch->children.size(); ++i) {
+            if (branch->children[i] != NULL) {
+                int next_level = current_level + 1;
+                AstFindUnitsInEachLevel(&branch->children[i], units_in_each_level, next_level);
+            }
+        }
+    }
+}
+
+static void AstFindUnitsInLevel(Ast **self, int level, std::vector<Unit> &units) {
+    if (level == 0) {
+        Unit unit = ToUnit(self);
+        units.push_back(unit);
+    }
+    else if ((*self) -> type == AST_BRANCH) {
+        Branch *branch = static_cast<Branch *>(*self);
+        for (size_t i = 0; i < branch->children.size(); ++i) {
+            if (branch->children[i] != NULL) {
+                AstFindUnitsInLevel(&branch->children[i], level - 1, units);
+            }
+        }
+    }
+}
+
+Tree *TreeInit(TSNode ts_node, std::string source_code) {
+    Tree *self = new Tree();
+    self->source_code = source_code;
+    Leaf *prev_leaf = NULL;
+    self->root_node = AstInit(ts_node, source_code, &prev_leaf);
+    return self;
+}
+
+void TreeDelete(Tree *self) {
+    AstDelete(self->root_node);
+    delete self;
+}
+
+void TreeFindUnits(Tree *self, std::vector<Ast **> &units, std::string ts_type) {
+    AstFindUnits(self->root_node, units, ts_type);
+}
+
+void TreeWriteToFile(Tree *self, std::string file_name) {
+    std::ofstream ofstream(file_name);
+    if (self->root_node != NULL) {
+        AstWriteToFile(self->root_node, self->source_code, ofstream);
+    }
+
+    ofstream << "\n";
+    ofstream.close();
+}
+
+void AstPrintXml(Ast *self) {
     static int indent = 0;
     if (self->type == AST_LEAF) {
         for (int i = 0; i < indent; ++i) printf(" ");
@@ -112,30 +170,20 @@ static void AstPrintXml(Ast *self) {
     }
 }
 
-Tree *TreeInit(TSNode ts_node, std::string source_code) {
-    Tree *self = new Tree();
-    self->source_code = source_code;
-    Leaf *prev_leaf = NULL;
-    self->root_node = AstInit(ts_node, source_code, &prev_leaf);
-    return self;
-}
-
-void TreeDelete(Tree *self) {
-    AstDelete(self->root_node);
-    delete self;
-}
-
-void TreeFindUnits(Tree *self, std::vector<Ast **> &units, std::string ts_type) {
-    AstFindUnits(self->root_node, units, ts_type);
-}
-
-void TreeWriteToFile(Tree *self, std::string file_name) {
-    std::ofstream ofstream(file_name);
-    AstWriteToFile(self->root_node, self->source_code, ofstream);
-    ofstream << "\n";
-    ofstream.close();
-}
-
 void TreePrintXml(Tree *self) {
     AstPrintXml(self->root_node);
+}
+
+std::vector<std::vector<Unit>> TreeFindUnitsInEachLevel(Tree *self) {
+    std::vector<std::vector<Unit>> units_in_each_level;
+    std::vector<Unit> units_in_first_level;
+    units_in_each_level.push_back(units_in_first_level);
+    AstFindUnitsInEachLevel(&self->root_node, units_in_each_level, 0);
+    return units_in_each_level;
+}
+
+std::vector<Unit> TreeFindUnitsInLevel(Tree *self, int level) {
+    std::vector<Unit> units_in_level;
+    AstFindUnitsInLevel(&self->root_node, level, units_in_level);
+    return units_in_level;
 }

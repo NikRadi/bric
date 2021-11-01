@@ -1,4 +1,5 @@
 #include "Ddmin.hpp"
+#include "Tree.hpp"
 #include <algorithm> // min, max
 #include <cassert>
 
@@ -12,6 +13,7 @@ static void Ddmin(AlgorithmParams params, std::vector<Unit> units, std::vector<U
         }
         else {
             Enable(units);
+            TreeWriteToFile(params.tree, params.c_file_name);
         }
 
         return;
@@ -86,4 +88,9 @@ void Ddmin(AlgorithmParams params, std::vector<Ast **> units, std::vector<Unit> 
     assert(units.size() > 0);
     std::vector<Unit> ast_units = ToUnits(units);
     Ddmin(params, ast_units, removed_units, 2);
+}
+
+void Ddmin(AlgorithmParams params, std::vector<Unit> units, std::vector<Unit> &removed_units) {
+    assert(units.size() > 0);
+    Ddmin(params, units, removed_units, 2);
 }

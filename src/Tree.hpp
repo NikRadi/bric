@@ -1,5 +1,6 @@
 #ifndef BRIC_TREE_HPP
 #define BRIC_TREE_HPP
+#include "AlgorithmGeneral.hpp"
 #include <string>
 #include <tree_sitter/api.h>
 #include <vector>
@@ -46,6 +47,10 @@ void TreeFindUnits(Tree *self, std::vector<Ast **> &units, std::string ts_type);
 
 void TreeWriteToFile(Tree *self, std::string file_name);
 
+void AstPrintXml(Ast *self);
+
 void TreePrintXml(Tree *self);
+
+std::vector<Unit> TreeFindUnitsInLevel(Tree *self, int level);
 
 #endif // BRIC_TREE_HPP

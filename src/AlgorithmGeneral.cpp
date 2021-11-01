@@ -1,13 +1,20 @@
 #include "AlgorithmGeneral.hpp"
 
 
+Unit ToUnit(Ast **ast) {
+    Unit unit;
+    unit.ast_value = *ast;
+    unit.ast_in_tree = ast;
+    return unit;
+}
+
 std::vector<Unit> ToUnits(std::vector<Ast **> asts) {
     std::vector<Unit> units;
     for (size_t i = 0; i < asts.size(); ++i) {
-        Unit unit;
-        unit.ast_value = *asts[i];
-        unit.ast_in_tree = asts[i];
-
+//        Unit unit;
+//        unit.ast_value = *asts[i];
+//        unit.ast_in_tree = asts[i];
+        Unit unit = ToUnit(asts[i]);
         units.push_back(unit);
     }
 
@@ -41,17 +48,27 @@ std::vector<std::vector<Unit>> Partition(std::vector<Unit> units, size_t num_par
     return partitions;
 }
 
+void Enable(Unit unit) {
+    *unit.ast_in_tree = unit.ast_value;
+}
+
 void Enable(std::vector<Unit> partition) {
     for (size_t i = 0; i < partition.size(); ++i) {
-        Unit unit = partition[i];
-        *unit.ast_in_tree = unit.ast_value;
+        Enable(partition[i]);
+//        Unit unit = partition[i];
+//        *unit.ast_in_tree = unit.ast_value;
     }
+}
+
+void Disable(Unit unit) {
+    *unit.ast_in_tree = NULL;
 }
 
 void Disable(std::vector<Unit> partition) {
     for (size_t i = 0; i < partition.size(); ++i) {
-        Unit unit = partition[i];
-        *unit.ast_in_tree = NULL;
+        Disable(partition[i]);
+//        Unit unit = partition[i];
+//        *unit.ast_in_tree = NULL;
     }
 }
 

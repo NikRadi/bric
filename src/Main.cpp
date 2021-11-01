@@ -59,10 +59,10 @@ int main(int argc, char **argv) {
     TreeFindUnits(tree, units, "if_statement");
     std::vector<Unit> removed_units;
 
+    TreePrintXml(tree);
 //    Ddmin(params, units, removed_units);
-    BinaryReduction(params, units, removed_units);
-//    Hdd(params);
-//    HddWithBinaryReduction(params);
+//    BinaryReduction(params, units2, removed_units);
+//    Hdd(params, removed_units);
     Enable(removed_units);
 
     std::string reduced_source_code = ReadFile(c_file_name);

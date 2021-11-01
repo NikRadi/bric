@@ -6,4 +6,6 @@
 
 void Ddmin(AlgorithmParams params, std::vector<Ast **> units, std::vector<Unit> &removed_units);
 
+void Ddmin(AlgorithmParams params, std::vector<Unit> units, std::vector<Unit> &removed_units);
+
 #endif // BRIC_DDMIN_HPP
