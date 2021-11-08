@@ -1,0 +1,31 @@
+# NOTE: The project is compiled using 'clang-cl', which allows using both clang and msvc commands.
+# 		Also, to run this from the msvc x64 native tools command prompt, or run 'vcvarsall.bat'.
+
+# -Wno-zero-as-null-pointer-constant	Clang says to use 'nullptr' instead of 'NULL' and at the same time says
+#  											that C is incompatible with 'nullptr', which is why we disable this
+#  											warning so we can use 'NULL'.
+# -Wno-c++98-compat-pedantic			Says 'commas at the end of enumerator lists are incompatible with C++98'
+#  											in the 'lib\tree_sitter\api.h' file.
+# -Wno-deprecated-declarations			Comlains about stuff in msvc 'vcruntime.h' file and to use 'strncpy_s'
+#  											instead of 'strncpy'.
+IGNOREWARNINGS=-Wno-zero-as-null-pointer-constant -Wno-c++98-compat-pedantic -Wno-deprecated-declarations
+# /I							 		Add directory to include search path.
+# /O2									Optimize for speed.
+# /Wall									Enable all diagnostics.
+# /Zi									Makes it possible to use the Visual Studio debugger
+CLANGFLAGS=/I lib /O2 /Wall /Zi $(IGNOREWARNINGS)
+CLANGLINK=lib\libtree-sitter.o lib\parser.o
+EXENAME=bric
+
+
+all:
+	clang-cl $(CLANGFLAGS) src\*cpp $(CLANGLINK) -o $(EXENAME).exe
+
+
+.PHONY: clean
+clean:
+	rm -f $(EXENAME).exe
+	rm -f $(EXENAME).exp
+	rm -f $(EXENAME).ilk
+	rm -f $(EXENAME).lib
+	rm -f $(EXENAME).pdb

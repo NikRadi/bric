@@ -1,15 +1,15 @@
 # Files
-bric
-*.c
-*.o
-*.out
-*.sh
-
-# vim temporary files
+output.txt
+Predicate.bat
+Reduced_Test.c
+setup_msvc.bat
+Test.c
+Test.save.c
+*.exe
+*.obj
 *.swp
 
 # Folders
-# temporarily ignored
 lib/
-src/tree-sitter-c/
-src/tree-sitter-java/
+.vs/
+.vscode/
