@@ -4,14 +4,13 @@ import subprocess
 
 
 class Benchmark:
-    def __init__(self, test_dir_name, lines_before, lines_after):
-        self.test_dir_name = test_dir_name
-        self.lines_before = lines_before
-        self.lines_after = lines_after
-
-
-def count_file_lines(file_name):
-    return sum(1 for _ in open(file_name))
+    def __init__(self):
+        self.tool_name           = None
+        self.test_name           = None
+        self.bytes_before        = None
+        self.bytes_after         = None
+        self.time_seconds        = None
+        self.num_predicate_calls = None
 
 
 if __name__ == "__main__":
@@ -28,26 +27,32 @@ if __name__ == "__main__":
 
         print(f"testing {sub_dir_name}")
         os.chdir(sub_dir_name)
-        num_lines_before = count_file_lines("Main.c")
+        bytes_before = os.path.getsize("Main.c")
 
         result = subprocess.run([f"creduce", "./Predicate.sh", "Main.c"], stdout=subprocess.PIPE)
         if result.returncode != 0:
             print(f"test in directory '{sub_dir_name}' returned exit code {result.returncode}")
             continue
 
-        num_lines_after = count_file_lines("Main.c")
+        bytes_after = os.path.getsize("Main.c")
         os.remove("Main.c")
         os.rename("Main.c.orig", "Main.c")
 
-        benchmark = Benchmark(sub_dir_name, num_lines_before, num_lines_after)
+        benchmark = Benchmark()
+        benchmark.tool_name = "creduce"
+        benchmark.test_name = sub_dir_name
+        benchmark.bytes_before = bytes_before
+        benchmark.bytes_after = bytes_after
+        benchmark.time_seconds = -1
+        benchmark.num_predicate_calls = -1
         benchmarks.append(benchmark)
 
     os.chdir(dir_path)
     now = datetime.datetime.now()
     filename = f"{now.year}{now.month}{now.day}{now.hour}{now.minute}{now.second}.csv"
     file = open(filename, "w")
-    file.write("test name,lines before, lines after\n")
-    for benchmark in benchmarks:
-        file.write(f"{benchmark.test_dir_name},{benchmark.lines_before},{benchmark.lines_after}\n")
+    file.write("tool name,bytes before,bytes after,lines after,time seconds,num predicate calls\n")
+    for b in benchmarks:
+        file.write(f"{b.tool_name},{b.test_name},{b.bytes_before},{b.bytes_after},{b.time_seconds}{b.num_predicate_calls}\n")
 
     file.close()

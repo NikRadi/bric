@@ -5,6 +5,10 @@
 
 class Timer {
 public:
+    void Reset() {
+        m_total_milliseconds = 0;
+    }
+
     void Start() {
         m_start_time = std::chrono::high_resolution_clock::now();
     }

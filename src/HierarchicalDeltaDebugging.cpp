@@ -2,17 +2,16 @@
 #include "DeltaDebugging.hpp"
 
 
-void HierarchicalDeltaDebugging(Ast *root_node, const char *file_name, const char *run_predicate_command) {
+void HierarchicalDeltaDebugging(AlgorithmParams params) {
     bool removed_nodes;
     do {
         removed_nodes = false;
         int level = 0;
         std::vector<Ast *> nodes;
-        do {
-            nodes.clear();
-            AstFindNodes(root_node, AST_IS_ACTIVE, level, nodes);
-            printf("Level %d (%zu nodes) \n", level, nodes.size());
-            DeltaDebugging(root_node, file_name, run_predicate_command, nodes);
+        AstFindNodes(params.root_node, AST_IS_ACTIVE, level, nodes);
+        while (nodes.size() > 0) {
+            printf("level %d (%zu nodes)\n", level, nodes.size());
+            DeltaDebugging(params, nodes);
             if (!removed_nodes) {
                 for (size_t i = 0; i < nodes.size(); ++i) {
                     if (!(nodes[i]->flags & AST_IS_ACTIVE)) {
@@ -22,6 +21,8 @@ void HierarchicalDeltaDebugging(Ast *root_node, const char *file_name, const cha
             }
 
             level += 1;
-        } while (nodes.size() > 0);
+            nodes.clear();
+            AstFindNodes(params.root_node, AST_IS_ACTIVE, level, nodes);
+        }
     } while (removed_nodes);
 }

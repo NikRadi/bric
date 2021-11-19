@@ -27,14 +27,11 @@ static Ast *AstInit(TSNode ts_node, const char *source_code, uint32_t &prev_end_
         return static_cast<Ast *>(leaf);
     }
 
-    Branch *branch;
     const char *node_type = ts_node_type(ts_node);
+    Branch *branch = new Branch;
+    branch->type = node_type;
     if (strcmp(node_type, "function_definition") == 0) {
-        branch = static_cast<Branch *>(new FunctionDef);
-    }
-    else {
-        branch = new Branch;
-        branch->type = node_type;
+        branch->flags |= AST_TYPE_FUNCTION_DEF;
     }
 
     for (uint32_t i = 0; i < num_children; ++i) {
@@ -76,7 +73,7 @@ void AstWriteToFile(Ast *root_node, const char *file_name) {
     ofstream.close();
 }
 
-Ast *AstFindNodeInChildren(Branch *node, const char *type) {
+Ast *AstFindChild(Branch *node, const char *type) {
     for (size_t i = 0; i < node->children.size(); ++i) {
         if (strcmp(node->children[i]->type, type) == 0) {
             return node->children[i];

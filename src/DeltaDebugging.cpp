@@ -1,7 +1,11 @@
 #include "DeltaDebugging.hpp"
+#include "Timer.hpp"
 #include <fstream>
 #include <string>
 #include <vector>
+
+
+static Timer predicate_timer;
 
 
 static size_t Max(size_t a, size_t b) {
@@ -35,15 +39,10 @@ static std::vector<std::vector<Ast *>> Partition(std::vector<Ast *> nodes, size_
     return partitions;
 }
 
-static bool IsPredicateSuccessful(Ast *root_node, const char *file_name, const char *run_predicate_command) {
-    AstWriteToFile(root_node, file_name);
-    return system(run_predicate_command) == 0;
-}
-
-static void DeltaDebugging(Ast *root_node, const char *file_name, const char *run_predicate_command, std::vector<Ast *> nodes, size_t num_partitions) {
+static void DeltaDebugging(AlgorithmParams params, std::vector<Ast *> nodes, size_t num_partitions) {
     if (nodes.size() == 1) {
         nodes[0]->flags &= ~AST_IS_ACTIVE;
-        if (!IsPredicateSuccessful(root_node, file_name, run_predicate_command)) {
+        if (!IsPredicateSuccessful(params)) {
             nodes[0]->flags |= AST_IS_ACTIVE;
         }
 
@@ -62,8 +61,8 @@ static void DeltaDebugging(Ast *root_node, const char *file_name, const char *ru
             partitions[i][j]->flags |= AST_IS_ACTIVE;
         }
 
-        if (IsPredicateSuccessful(root_node, file_name, run_predicate_command)) {
-            DeltaDebugging(root_node, file_name, run_predicate_command, partitions[i], 2);
+        if (IsPredicateSuccessful(params, predicate_timer)) {
+            DeltaDebugging(params, partitions[i], 2);
             return;
         }
 
@@ -84,7 +83,7 @@ static void DeltaDebugging(Ast *root_node, const char *file_name, const char *ru
                 partitions[i][j]->flags &= ~AST_IS_ACTIVE;
             }
 
-            if (IsPredicateSuccessful(root_node, file_name, run_predicate_command)) {
+            if (IsPredicateSuccessful(params, predicate_timer)) {
                 std::vector<Ast *> new_nodes;
                 for (size_t j = 0; j < partitions.size(); ++j) {
                     if (j == i) {
@@ -96,7 +95,7 @@ static void DeltaDebugging(Ast *root_node, const char *file_name, const char *ru
                     }
                 }
 
-                DeltaDebugging(root_node, file_name, run_predicate_command, new_nodes, Max(num_partitions - 1, 2ul));
+                DeltaDebugging(params, new_nodes, Max(num_partitions - 1, 2ul));
                 return;
             }
 
@@ -107,10 +106,15 @@ static void DeltaDebugging(Ast *root_node, const char *file_name, const char *ru
     }
 
     if (num_partitions < nodes.size()) {
-        DeltaDebugging(root_node, file_name, run_predicate_command, nodes, Max(nodes.size(), 2 * num_partitions));
+        DeltaDebugging(params, nodes, Max(nodes.size(), 2 * num_partitions));
     }
 }
 
-void DeltaDebugging(Ast *root_node, const char *file_name, const char *run_predicate_command, std::vector<Ast *> nodes) {
-    DeltaDebugging(root_node, file_name, run_predicate_command, nodes, 2);
+void DeltaDebugging(AlgorithmParams params, std::vector<Ast *> nodes) {
+    Timer timer;
+    timer.Start();
+    predicate_timer.Reset();
+    DeltaDebugging(params, nodes, 2);
+    timer.Stop();
+    printf("DeltaDebugging finished in %llums (%llums spent calling Predicate.sh)\n", timer.ElapsedMilliseconds(), predicate_timer.ElapsedMilliseconds());
 }

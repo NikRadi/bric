@@ -25,21 +25,17 @@ struct Leaf : public Ast {
 
 struct Branch : public Ast {
     std::vector<Ast *> children;
+    std::vector<Ast *> dependencies;
 
     Branch() { flags |= AST_TYPE_BRANCH; }
 };
 
-struct FunctionDef : public Branch {
-    std::vector<Ast *> dependencies;
-
-    FunctionDef() { flags |= AST_TYPE_FUNCTION_DEF; }
-};
 
 Ast *AstInit(TSNode root_node, const char *source_code);
 
 void AstWriteToFile(Ast *root_node, const char *file_name);
 
-Ast *AstFindNodeInChildren(Branch *node, const char *type);
+Ast *AstFindChild(Branch *node, const char *type);
 
 void AstFindNodes(Ast *node, const char *type, std::vector<Ast *> &nodes);
 

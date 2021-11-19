@@ -1,4 +1,1 @@
-#!/bin/sh
-gcc Main.c -o Main.out
-./Main.out | grep "Hi"
-rm Main.out
+gcc Main.c && ./a.out | grep "Hi"

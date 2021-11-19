@@ -1,8 +1,8 @@
 #ifndef BRIC_HIERARCHICAL_DELTA_DEBUGGING_HPP
 #define BRIC_HIERARCHICAL_DELTA_DEBUGGING_HPP
-#include "AstNodes.hpp"
+#include "AlgorithmParams.hpp"
 
 
-void HierarchicalDeltaDebugging(Ast *root_node, const char *file_name, const char *run_predicate_command);
+void HierarchicalDeltaDebugging(AlgorithmParams params);
 
 #endif //  BRIC_HIERARCHICAL_DELTA_DEBUGGING_HPP
