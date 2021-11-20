@@ -10,7 +10,7 @@ void HierarchicalDeltaDebugging(AlgorithmParams params) {
         std::vector<Ast *> nodes;
         AstFindNodes(params.root_node, AST_IS_ACTIVE, level, nodes);
         while (nodes.size() > 0) {
-            printf("level %d (%zu nodes)\n", level, nodes.size());
+//            printf("level %d (%zu nodes)\n", level, nodes.size());
             DeltaDebugging(params, nodes);
             if (!removed_nodes) {
                 for (size_t i = 0; i < nodes.size(); ++i) {

@@ -55,86 +55,86 @@ struct FunctionDef : public Node {
 static Node *InitAst(TSNode ts_node, const char *source_code, uint32_t &prev_end_byte);
 
 
-static void Print(Node *node) {
-    if (node->type == NODE_FUNCTION_CODE) {
-        FunctionCode *f = static_cast<FunctionCode *>(node);
-        FunctionDef *d = static_cast<FunctionDef *>(f->dependencies[0]);
-        printf("[%s()!code]", d->identifier);
-    }
-    else if (node->type == NODE_FUNCTION_DEF) {
-        FunctionDef *f = static_cast<FunctionDef *>(node);
-        printf("[%s()]", f->identifier);
-    }
-}
+//static void Print(Node *node) {
+//    if (node->type == NODE_FUNCTION_CODE) {
+//        FunctionCode *f = static_cast<FunctionCode *>(node);
+//        FunctionDef *d = static_cast<FunctionDef *>(f->dependencies[0]);
+//        printf("[%s()!code]", d->identifier);
+//    }
+//    else if (node->type == NODE_FUNCTION_DEF) {
+//        FunctionDef *f = static_cast<FunctionDef *>(node);
+//        printf("[%s()]", f->identifier);
+//    }
+//}
 
-template <class T>
-static void Print(std::vector<T> vector) {
-    printf("{");
-    if (vector.size() > 0) {
-        Print(vector[0]);
-        for (size_t i = 1; i < vector.size(); ++i) {
-            printf(", ");
-            Print(vector[i]);
-        }
-    }
+//template <class T>
+//static void Print(std::vector<T> vector) {
+//    printf("{");
+//    if (vector.size() > 0) {
+//        Print(vector[0]);
+//        for (size_t i = 1; i < vector.size(); ++i) {
+//            printf(", ");
+//            Print(vector[i]);
+//        }
+//    }
+//
+//    printf("}");
+//}
 
-    printf("}");
-}
-
-static void PrintXml(Node *node) {
-    static int indent = 0;
-    for (int i = 0; i < indent; ++i) printf(" ");
-    if (node->type == NODE_LEAF) {
-        LeafNode *l = static_cast<LeafNode *>(node);
-        printf("<Leaf pre_value=\"%s\" value=\"%s\"/>\n", l->pre_value, l->value);
-    }
-    else if (node->type == NODE_BRANCH) {
-        assert(node->type == NODE_BRANCH);
-        BranchNode *b = static_cast<BranchNode *>(node);
-        printf("<Branch>\n");
-        indent += 4;
-        for (size_t i = 0; i < b->children.size(); ++i) {
-            PrintXml(b->children[i]);
-        }
-
-        indent -= 4;
-        for (int i = 0; i < indent; ++i) printf(" ");
-        printf("<Branch/>\n");
-    }
-    else if (node->type == NODE_CALL_EXPR) {
-        CallExpr *c = static_cast<CallExpr *>(node);
-        printf("<CallExpr identifier=\"%s\">\n", c->identifier);
-        indent += 4;
-        for (size_t i = 0; i < c->children.size(); ++i) {
-            PrintXml(c->children[i]);
-        }
-
-        indent -= 4;
-        for (int i = 0; i < indent; ++i) printf(" ");
-        printf("<CallExpr/>\n");
-    }
-    else if (node->type == NODE_FUNCTION_CODE) {
-        FunctionCode *f = static_cast<FunctionCode *>(node);
-        printf("<FunctionCode>\n");
-        indent += 4;
-        for (size_t i = 0; i < f->children.size(); ++i) {
-            PrintXml(f->children[i]);
-        }
-
-        indent -= 4;
-        for (int i = 0; i < indent; ++i) printf(" ");
-        printf("<FunctionCode/>\n");
-    }
-    else if (node->type == NODE_FUNCTION_DEF) {
-        FunctionDef *f = static_cast<FunctionDef *>(node);
-        printf("<FunctionDef identifier=\"%s\" value=\"%s\">\n", f->identifier, f->value);
-        indent += 4;
-        PrintXml(static_cast<Node *>(f->code));
-        indent -= 4;
-        for (int i = 0; i < indent; ++i) printf(" ");
-        printf("<FunctionDef/>\n");
-    }
-}
+//static void PrintXml(Node *node) {
+//    static int indent = 0;
+//    for (int i = 0; i < indent; ++i) printf(" ");
+//    if (node->type == NODE_LEAF) {
+//        LeafNode *l = static_cast<LeafNode *>(node);
+//        printf("<Leaf pre_value=\"%s\" value=\"%s\"/>\n", l->pre_value, l->value);
+//    }
+//    else if (node->type == NODE_BRANCH) {
+//        assert(node->type == NODE_BRANCH);
+//        BranchNode *b = static_cast<BranchNode *>(node);
+//        printf("<Branch>\n");
+//        indent += 4;
+//        for (size_t i = 0; i < b->children.size(); ++i) {
+//            PrintXml(b->children[i]);
+//        }
+//
+//        indent -= 4;
+//        for (int i = 0; i < indent; ++i) printf(" ");
+//        printf("<Branch/>\n");
+//    }
+//    else if (node->type == NODE_CALL_EXPR) {
+//        CallExpr *c = static_cast<CallExpr *>(node);
+//        printf("<CallExpr identifier=\"%s\">\n", c->identifier);
+//        indent += 4;
+//        for (size_t i = 0; i < c->children.size(); ++i) {
+//            PrintXml(c->children[i]);
+//        }
+//
+//        indent -= 4;
+//        for (int i = 0; i < indent; ++i) printf(" ");
+//        printf("<CallExpr/>\n");
+//    }
+//    else if (node->type == NODE_FUNCTION_CODE) {
+//        FunctionCode *f = static_cast<FunctionCode *>(node);
+//        printf("<FunctionCode>\n");
+//        indent += 4;
+//        for (size_t i = 0; i < f->children.size(); ++i) {
+//            PrintXml(f->children[i]);
+//        }
+//
+//        indent -= 4;
+//        for (int i = 0; i < indent; ++i) printf(" ");
+//        printf("<FunctionCode/>\n");
+//    }
+//    else if (node->type == NODE_FUNCTION_DEF) {
+//        FunctionDef *f = static_cast<FunctionDef *>(node);
+//        printf("<FunctionDef identifier=\"%s\" value=\"%s\">\n", f->identifier, f->value);
+//        indent += 4;
+//        PrintXml(static_cast<Node *>(f->code));
+//        indent -= 4;
+//        for (int i = 0; i < indent; ++i) printf(" ");
+//        printf("<FunctionDef/>\n");
+//    }
+//}
 
 static void WriteToFile(Node *node, std::ofstream &ofstream) {
     if (!node->is_active) {
@@ -444,7 +444,7 @@ static size_t FindSmallestSuccessfulIdx(Node *root_node, const char *file_name, 
     size_t max_idx = d.size() - 1;
     while (min_idx < max_idx) {
         size_t mid_idx = (min_idx + max_idx) >> 1;
-        printf("%zu %zu %zu\n", min_idx, mid_idx, max_idx);
+//        printf("%zu %zu %zu\n", min_idx, mid_idx, max_idx);
         for (size_t i = 0; i <= mid_idx; ++i) {
             for (auto node : d[i]) {
                 node->is_active = true;
@@ -458,11 +458,11 @@ static size_t FindSmallestSuccessfulIdx(Node *root_node, const char *file_name, 
         }
 
         if (IsPredicateSuccessful(root_node, file_name, run_predicate_command)) {
-            printf("success\n");
+//            printf("success\n");
             max_idx = mid_idx;
         }
         else {
-            printf("failure\n");
+//            printf("failure\n");
             min_idx = mid_idx + 1;
         }
     }
@@ -506,21 +506,21 @@ void GeneralizedBinaryReduction(TSNode ts_root_node, const char *file_name, cons
     std::vector<Node *> variableorder = Postorder(nodes_to_reduce, is_visited);
     std::vector<std::vector<Node *>> d = Progression(variableorder, nodes_to_reduce, nodes_to_reduce, learned_set);
 
-    printf("nodes to reduce: ");
-    Print(nodes_to_reduce);
-    printf("\n\n");
+//    printf("nodes to reduce: ");
+//    Print(nodes_to_reduce);
+//    printf("\n\n");
 
-    printf("variableorder: ");
-    Print(variableorder);
-    printf("\n\n");
+//    printf("variableorder: ");
+//    Print(variableorder);
+//    printf("\n\n");
 
-    int counter = 0;
+//    int counter = 0;
     do {
-        printf("\n============\n");
-        printf("progression %d: ", counter);
-        Print(d);
-        printf("\n\n");
-        counter += 1;
+//        printf("\n============\n");
+//        printf("progression %d: ", counter);
+//        Print(d);
+//        printf("\n\n");
+//        counter += 1;
         size_t idx = FindSmallestSuccessfulIdx(root_node, file_name, run_predicate_command, d);
         // It works with d[0] and the search is finished
         if (idx == 0) {
@@ -553,6 +553,6 @@ void GeneralizedBinaryReduction(TSNode ts_root_node, const char *file_name, cons
         }
     } while (!IsPredicateSuccessful(root_node, file_name, run_predicate_command));
 
-    Print(d);
-    printf("\n\n");
+//    Print(d);
+//    printf("\n\n");
 }

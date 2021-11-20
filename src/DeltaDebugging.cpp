@@ -116,5 +116,5 @@ void DeltaDebugging(AlgorithmParams params, std::vector<Ast *> nodes) {
     predicate_timer.Reset();
     DeltaDebugging(params, nodes, 2);
     timer.Stop();
-    printf("DeltaDebugging finished in %llums (%llums spent calling Predicate.sh)\n", timer.ElapsedMilliseconds(), predicate_timer.ElapsedMilliseconds());
+    //printf("DeltaDebugging finished in %llums (%llums spent calling Predicate.sh)\n", timer.ElapsedMilliseconds(), predicate_timer.ElapsedMilliseconds());
 }
