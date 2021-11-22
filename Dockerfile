@@ -9,4 +9,4 @@ RUN apt-get -y install vim
 
 RUN git clone https://github.com/NikRadi/bric.git
 RUN cd bric/benchmarks/
-RUN python3 ./run_benchmarks.py
+# RUN python3 ./run_benchmarks.py
