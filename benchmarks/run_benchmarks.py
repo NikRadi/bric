@@ -1,5 +1,4 @@
 import os
-import subprocess
 import time
 
 
@@ -29,18 +28,17 @@ if __name__ == "__main__":
         os.chdir(sub_dir_name)
         bytes_before = os.path.getsize("Main.c")
 
+        os.system("chmod u+x Predicate.sh")
         time_before = time.time()
-        result = subprocess.run([f"creduce", "./Predicate.sh", "Main.c"], stdout=subprocess.PIPE)
+        return_code = os.system(f"creduce Predicate.sh Main.c")
         time_after = time.time()
-        if result.returncode != 0:
-            print(f"test in directory '{sub_dir_name}' returned exit code {result.returncode}")
+        if return_code != 0:
+            print(f"test in directory '{sub_dir_name}' returned exit code {return_code}")
             continue
 
         bytes_after = os.path.getsize("Main.c")
-        counter_file = open("counter.txt", "r")
-        num_predicate_calls = len(counter_file.read())
-        counter_file.close()
 
+        # creduce saves the original file in '.c.orig'
         os.remove("Main.c")
         os.rename("Main.c.orig", "Main.c")
 
@@ -50,7 +48,7 @@ if __name__ == "__main__":
         benchmark.bytes_before = bytes_before
         benchmark.bytes_after = bytes_after
         benchmark.time_seconds = time_before - time_after
-        benchmark.num_predicate_calls = num_predicate_calls
+        benchmark.num_predicate_calls = -1
         benchmarks.append(benchmark)
 
     os.chdir(dir_path)
