@@ -1,6 +1,3 @@
-#include <stdio.h>
-
-
 void MyFunction() {
     printf("Hello\n");
 }

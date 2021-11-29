@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set +e
 
 BEFORE=`date +%n`
 SIZE_BYTES=`wc -c < Main.c`
