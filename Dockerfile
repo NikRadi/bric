@@ -5,7 +5,7 @@ FROM ubuntu:latest
 ARG DEBIAN_FRONTEND=noninteractive
 
 # build-essential: Make
-# wget:            Needed to download perses_deploy.jar
+# wget:            Needed to download perses and tree-sitter
 RUN apt-get update && \
     apt-get -y install build-essential && \
     apt-get -y install creduce && \
