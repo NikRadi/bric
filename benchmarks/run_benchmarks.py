@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Iterable, Tuple
 import os
 import pandas as pd
 import shutil
@@ -6,85 +7,89 @@ import subprocess
 import time
 
 
-COLUMNS = [
-    "tool",
-    "test",
-    "bytes before",
-    "bytes after",
-    "time (s)",
-    "predicate calls",
-    "notes"
+@dataclass
+class Benchmark:
+    test: str
+    tool: str
+    bytes_before: int = -1
+    bytes_after: int = -1
+    nodes_before: int = -1
+    nodes_after: int = -1
+    err_nodes_before: int = -1
+    err_nodes_after: int = -1
+    time_sec: float = -1
+    predicate_calls: int = -1
+    failed_compiles: int = -1
+    failed_runs: int = -1
+    other: str = ""
+
+
+COLUMNS: Iterable[str] = [variable_name for variable_name in Benchmark.__dataclass_fields__]
+TOOLS: Tuple[str, Iterable[str]] = [
+    ("creduce", ["creduce", "PredicateWrapper.sh", "Main.c"]),
+    ("perses", ["java", "-jar", "../perses_deploy.jar", "--test-script", "PredicateWrapper.sh", "--input-file", "Main.c", "--in-place", "true"]),
+    ("bric-ddmin", ["../bric", "Main.c", "PredicateWrapper.sh", "-ddmin"]),
+    ("bric-hdd", ["../bric", "Main.c", "PredicateWrapper.sh", "-hdd"]),
+    ("bric-br", ["../bric", "Main.c", "PredicateWrapper.sh", "-br"]),
+    ("bric-gbr", ["../bric", "Main.c", "PredicateWrapper.sh", "-gbr"]),
 ]
 
 
-@dataclass
-class Benchmark:
-    tool_name : str
-    test_name : str
-    bytes_before : int = -1
-    bytes_after : int = -1
-    time_seconds : float = -1
-    num_predicate_calls : int = -1
-    notes : str = ""
+def find_file_size(file_name: str) -> Tuple[int, int, int]:
+    output = subprocess.run(["../astcounter", file_name], capture_output=True)
+    output_str = output.stdout.decode().split(",")
 
-    def add_to_df(self, df):
-        self.time_seconds = round(self.time_seconds, 2)
-        df.loc[len(df.index)] = [
-            self.tool_name,
-            self.test_name,
-            self.bytes_before,
-            self.bytes_after,
-            self.time_seconds,
-            self.num_predicate_calls,
-            self.notes
-        ]
+    bytes = os.path.getsize(file_name)
+    nodes = int(output_str[0])
+    err_nodes = int(output_str[1])
+    return bytes, nodes, err_nodes
+
+
+def try_remove_file(file_name: str) -> None:
+    if os.path.isfile(file_name):
+        os.remove(file_name)
 
 
 if __name__ == "__main__":
-    tools = [
-        ("creduce", ["creduce", "PredicateWrapper.sh", "Main.c"]),
-        ("perses", ["java", "-jar", "../perses_deploy.jar", "--test-script", "PredicateWrapper.sh", "--input-file", "Main.c", "--in-place", "true"]),
-        ("bric-ddmin", ["../bric", "Main.c", "PredicateWrapper.sh", "-ddmin"]),
-        ("bric-hdd", ["../bric", "Main.c", "PredicateWrapper.sh", "-hdd"]),
-        ("bric-br", ["../bric", "Main.c", "PredicateWrapper.sh", "-br"]),
-        ("bric-gbr", ["../bric", "Main.c", "PredicateWrapper.sh", "-gbr"]),
-    ]
-
-    benchmarks = pd.DataFrame(columns=COLUMNS)
+    benchmarks = []
     environment = os.environ.copy()
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    sub_dirs = [f.path for f in os.scandir(dir_path) if f.is_dir()]
-    sub_dirs.sort()
-    print(f"running benchmarks in {dir_path}")
-    for tool in tools:
-        for sub_dir in sub_dirs:
-            os.chdir(dir_path)
-            sub_dir_name = os.path.split(sub_dir)[-1]
-            if sub_dir_name[:-2] != "test":
-                continue
+    filepath = os.path.dirname(os.path.realpath(__file__))
+    subdirs = sorted([d.path for d in os.scandir(filepath) if d.is_dir])
+    for subdir in subdirs:
+        subdir_name = os.path.split(subdir)[-1]
+        if not subdir_name.startswith("test"):
+            continue
 
-            path = os.path.join(dir_path, sub_dir_name)
-            shutil.copy("PredicateWrapper.sh", path)
-            os.chdir(sub_dir_name)
-            if os.path.isfile("output.csv"):
-                os.remove("output.csv")
+        # Prepare the environment variables
+        environment["PREDICATE_CSV"] = os.path.join(subdir, "output.csv")
+        environment["PREDICATE_NAME"] = os.path.join(subdir, "Predicate.sh")
 
-            benchmark = Benchmark(tool[0], sub_dir_name)
-            if not os.path.isfile("Main.c"):
-                print(f"{sub_dir_name}: missing Main.c")
-                benchmark.notes = "missing Main.c"
-            else:
-                # Copy 'Main.c' so that the reducer works on a copy of the file.
-                # The tools typically rename the file, making it hard to clean up.
-                shutil.copyfile("Main.c", "OriginalMain.c")
-                benchmark.bytes_before = os.path.getsize("Main.c")
+        # Perses requires that the test-file and predicate-file are in the
+        # same folder, so we copy the predicate into the test folder.
+        shutil.copy("PredicateWrapper.sh", subdir)
 
-                subprocess.run(["chmod", "u+x", "Predicate.sh"], stdout=subprocess.DEVNULL)
-                subprocess.run(["dos2unix", "Predicate.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                environment["PREDICATE_CSV"] = path + "/output.csv"
-                environment["PREDICATE_NAME"] = path + "/Predicate.sh"
+        # Ensure that we have permission to run the predicate and that the
+        # predicate has unix line endings.
+        os.chdir(subdir)
+        subprocess.run(["chmod", "u+x", "Predicate.sh"], stdout=subprocess.DEVNULL)
+        subprocess.run(["dos2unix", "Predicate.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-                print(f"running {sub_dir_name} ({tool[0]})")
+        # Have a copy of the original "Main.c". The tools may change "Main.c".
+        shutil.copyfile("Main.c", "OriginalMain.c")
+        for tool in TOOLS:
+            print(f"{subdir_name} {tool[0]}")
+            main_path = os.path.join(subdir, "Main.c")
+            benchmark = Benchmark(subdir_name, tool[0])
+            shutil.copyfile("OriginalMain.c", "Main.c")
+
+            # Finding the size of the "Main.c" file could be done outside
+            # of this loop. However, we include it to ensure all tools
+            # reduce a file of the exact same size.
+            b, n, e = find_file_size(main_path)
+            benchmark.bytes_before = b
+            benchmark.nodes_before = n
+            benchmark.err_nodes_before = e
+            if os.path.isfile("Main.c"):
                 time_before = time.time()
                 result = subprocess.run(
                     tool[1],
@@ -93,29 +98,36 @@ if __name__ == "__main__":
                 )
 
                 time_after = time.time()
-                if os.path.isfile("a.out"):
-                    os.remove("a.out")
+                benchmark.time_sec = round(time_after - time_before, 2)
 
-                for file in os.listdir(path):
-                    if file.endswith(".orig"):
-                        os.remove(file)
-
-                benchmark.time_seconds = time_after - time_before
-                benchmark.bytes_after = os.path.getsize("Main.c")
-                if result.returncode != 0:
-                    print(f"test in directory '{sub_dir_name}' returned exit code {result.returncode}")
-                    benchmark.notes = f"returned exit code {result.returncode}."
-
+                b, n, e = find_file_size( main_path)
+                benchmark.bytes_after = b
+                benchmark.nodes_after = n
+                benchmark.err_nodes_after = e
                 if os.path.isfile("output.csv"):
-                    benchmark.num_predicate_calls = sum(1 for line in open("output.csv"))
+                    output = pd.read_csv("output.csv", header=None)
+                    benchmark.predicate_calls = len(output.index)
+                    benchmark.failed_compiles = len(output.loc[output[3] == 3].values)
+                    benchmark.failed_runs = len((output.loc[(output[3] == 0) & (output[4] == 1)].values))
                     os.remove("output.csv")
                 else:
-                    benchmark.notes += "Missing output.csv"
+                    print("missing output.csv")
+                    benchmark.other += "Missing output.csv. "
+            else:
+                print("missing output.csv")
+                benchmark.other += "Missing Main.c. "
 
-                os.rename("OriginalMain.c", "Main.c")
+            benchmarks.append(list(benchmark.__dict__.values()))
 
-            benchmark.add_to_df(benchmarks)
-            os.remove("PredicateWrapper.sh")
+        # Clean up folder. The "output.csv" has already been removed.
+        try_remove_file("a.out")
+        try_remove_file("PredicateWrapper.sh")
+        os.remove("OriginalMain.c")
+        for file in os.listdir(subdir):
+            if file.endswith(".orig"):
+                os.remove(file)
 
-    os.chdir(dir_path)
-    benchmarks.to_csv("benchmarks.csv")
+        os.chdir("..")
+
+    df = pd.DataFrame(benchmarks, columns=COLUMNS)
+    df.to_csv("benchmarks.csv", index=False)

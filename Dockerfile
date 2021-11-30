@@ -19,7 +19,7 @@ RUN apt-get update && \
     apt-get -y install vim && \
     apt-get -y install wget
 
-RUN pip3 install jupyter pandas
+RUN pip3 install jupyter pandas matplotlib
 
 COPY . /home/bric
 WORKDIR /home/bric/
@@ -32,7 +32,7 @@ RUN mv libtree-sitter.a ../lib/
 
 WORKDIR /home/bric/
 RUN make -f Makefile.nix
-RUN mv bric benchmarks/
+RUN mv bric astcounter benchmarks/
 
 WORKDIR /home/bric/benchmarks/
 RUN wget https://github.com/perses-project/perses/releases/download/v1.4/perses_deploy.jar

@@ -25,6 +25,10 @@ all:
 	clang-cl $(CLANGFLAGS) src\*cpp $(CLANGLINK) -o $(EXENAME).exe
 
 
+.PHONY: counter
+counter:
+	clang-cl $(CLANGFLAGS) ast_counter\AstCounter.cpp $(CLANGLINK) -o astcounter.exe
+
 .PHONY: clean
 clean:
 	rm -f $(EXENAME).exe
@@ -33,3 +37,4 @@ clean:
 	rm -f $(EXENAME).lib
 	rm -f $(EXENAME).pdb
 	rm -f output.txt
+	rm -f astcounter.*
