@@ -1,6 +1,7 @@
 #include "GeneralizedBinaryReduction.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <fstream>
 #include <stack>
 #include <tuple>
@@ -55,31 +56,31 @@ struct FunctionDef : public Node {
 static Node *InitAst(TSNode ts_node, const char *source_code, uint32_t &prev_end_byte);
 
 
-//static void Print(Node *node) {
-//    if (node->type == NODE_FUNCTION_CODE) {
-//        FunctionCode *f = static_cast<FunctionCode *>(node);
-//        FunctionDef *d = static_cast<FunctionDef *>(f->dependencies[0]);
-//        printf("[%s()!code]", d->identifier);
-//    }
-//    else if (node->type == NODE_FUNCTION_DEF) {
-//        FunctionDef *f = static_cast<FunctionDef *>(node);
-//        printf("[%s()]", f->identifier);
-//    }
-//}
+static void Print(Node *node) {
+    if (node->type == NODE_FUNCTION_CODE) {
+        FunctionCode *f = static_cast<FunctionCode *>(node);
+        FunctionDef *d = static_cast<FunctionDef *>(f->dependencies[0]);
+        printf("[%s()!code]", d->identifier);
+    }
+    else if (node->type == NODE_FUNCTION_DEF) {
+        FunctionDef *f = static_cast<FunctionDef *>(node);
+        printf("[%s()]", f->identifier);
+    }
+}
 
-//template <class T>
-//static void Print(std::vector<T> vector) {
-//    printf("{");
-//    if (vector.size() > 0) {
-//        Print(vector[0]);
-//        for (size_t i = 1; i < vector.size(); ++i) {
-//            printf(", ");
-//            Print(vector[i]);
-//        }
-//    }
-//
-//    printf("}");
-//}
+template <class T>
+static void Print(std::vector<T> vector) {
+    printf("{");
+    if (vector.size() > 0) {
+        Print(vector[0]);
+        for (size_t i = 1; i < vector.size(); ++i) {
+            printf(", ");
+            Print(vector[i]);
+        }
+    }
+
+    printf("}");
+}
 
 //static void PrintXml(Node *node) {
 //    static int indent = 0;
@@ -375,8 +376,13 @@ static void FindDependencies(Node *node, std::vector<Node *> &nodes_to_reduce) {
                 FunctionDef *f2 = static_cast<FunctionDef *>(function_defs[k]);
                 if (strcmp(c->identifier, f2->identifier) == 0) {
                     // Referential semantic dependency: [A()!code] => [B()]
-                    f->code->dependencies.push_back(function_defs[k]);
-                    f2->dependers.push_back(static_cast<Node *>(f->code));
+                    auto begin = f->code->dependencies.begin();
+                    auto end = f->code->dependencies.end();
+                    if (std::find(begin, end, function_defs[k]) == end) {
+                        f->code->dependencies.push_back(function_defs[k]);
+                        f2->dependers.push_back(static_cast<Node *>(f->code));
+                    }
+
                     break;
                 }
             }
@@ -440,11 +446,10 @@ static std::vector<std::vector<Node *>> Progression(std::vector<Node *> variable
 }
 
 static size_t FindSmallestSuccessfulIdx(Node *root_node, const char *file_name, const char *run_predicate_command, std::vector<std::vector<Node *>> &d) {
-    size_t min_idx = 1;
+    size_t min_idx = 0;
     size_t max_idx = d.size() - 1;
     while (min_idx < max_idx) {
         size_t mid_idx = (min_idx + max_idx) >> 1;
-//        printf("%zu %zu %zu\n", min_idx, mid_idx, max_idx);
         for (size_t i = 0; i <= mid_idx; ++i) {
             for (auto node : d[i]) {
                 node->is_active = true;
@@ -458,11 +463,9 @@ static size_t FindSmallestSuccessfulIdx(Node *root_node, const char *file_name, 
         }
 
         if (IsPredicateSuccessful(root_node, file_name, run_predicate_command)) {
-//            printf("success\n");
             max_idx = mid_idx;
         }
         else {
-//            printf("failure\n");
             min_idx = mid_idx + 1;
         }
     }
@@ -479,6 +482,11 @@ void GeneralizedBinaryReduction(TSNode ts_root_node, const char *file_name, cons
 
     std::vector<Node *> function_defs;
     FindChildren(root_node, NODE_FUNCTION_DEF, function_defs);
+    if (function_defs.size() == 1) {
+        // We only have the 'main' function
+        return;
+    }
+
     FunctionDef *main_function = NULL;
     for (size_t i = 0; i < function_defs.size(); ++i) {
         FunctionDef *f = static_cast<FunctionDef *>(function_defs[i]);
@@ -505,23 +513,11 @@ void GeneralizedBinaryReduction(TSNode ts_root_node, const char *file_name, cons
 
     std::vector<Node *> variableorder = Postorder(nodes_to_reduce, is_visited);
     std::vector<std::vector<Node *>> d = Progression(variableorder, nodes_to_reduce, nodes_to_reduce, learned_set);
-
-//    printf("nodes to reduce: ");
-//    Print(nodes_to_reduce);
-//    printf("\n\n");
-
-//    printf("variableorder: ");
-//    Print(variableorder);
-//    printf("\n\n");
-
-//    int counter = 0;
+    Print(d);
+    printf("\n");
     do {
-//        printf("\n============\n");
-//        printf("progression %d: ", counter);
-//        Print(d);
-//        printf("\n\n");
-//        counter += 1;
         size_t idx = FindSmallestSuccessfulIdx(root_node, file_name, run_predicate_command, d);
+        printf("idx: %zu\n", idx);
         // It works with d[0] and the search is finished
         if (idx == 0) {
             break;
@@ -552,7 +548,4 @@ void GeneralizedBinaryReduction(TSNode ts_root_node, const char *file_name, cons
             }
         }
     } while (!IsPredicateSuccessful(root_node, file_name, run_predicate_command));
-
-//    Print(d);
-//    printf("\n\n");
 }
