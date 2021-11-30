@@ -1,6 +1,6 @@
 #include "AstNodes.hpp"
 #include <fstream>
-#include <string>
+#include <cstring>
 #include <tree_sitter/api.h>
 
 

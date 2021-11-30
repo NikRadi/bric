@@ -15,11 +15,25 @@ RUN apt-get update && \
     apt-get -y install default-jre-headless && \
     apt-get -y install python3.8 && \
     apt-get -y install python3-pip && \
+    apt-get -y install unzip && \
     apt-get -y install vim && \
     apt-get -y install wget
 
-COPY . /home/bric
-WORKDIR /home/bric/benchmarks
 RUN pip3 install jupyter pandas
+
+COPY . /home/bric
+WORKDIR /home/bric/
+RUN wget https://github.com/tree-sitter/tree-sitter/archive/refs/tags/v0.20.1.zip
+RUN unzip v0.20.1.zip
+
+WORKDIR /home/bric/tree-sitter-0.20.1/
+RUN make
+RUN mv libtree-sitter.a ../lib/
+
+WORKDIR /home/bric/
+RUN make -f Makefile.nix
+RUN mv bric benchmarks/
+
+WORKDIR /home/bric/benchmarks/
 RUN wget https://github.com/perses-project/perses/releases/download/v1.4/perses_deploy.jar
 RUN python3 run_benchmarks.py

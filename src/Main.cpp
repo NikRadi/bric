@@ -4,6 +4,8 @@
 #include "GeneralizedBinaryReduction.hpp"
 #include "HierarchicalDeltaDebugging.hpp"
 #include <cassert>
+#include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <streambuf>
 #include <string>
@@ -37,6 +39,8 @@ static const char *ToString(AlgorithmType type) {
         case ALGO_BINARY_REDUCTION:             return "binary reduction";
         case ALGO_GENERALIZED_BINARY_REDUCTION: return "generalized binary reduction";
     }
+
+    return "err";
 }
 
 //static void PrintXml(TSNode node, const char *source_code) {
@@ -81,6 +85,16 @@ static void WriteFile(std::string file_name, std::string content) {
     ofstream.close();
 }
 
+static bool FileExists(std::string file_name) {
+    FILE *file = fopen(file_name.c_str(), "r");
+    if (file == NULL) {
+        return false;
+    }
+
+    fclose(file);
+    return true;
+}
+
 int main(int argc, char **argv) {
     Timer timer;
     timer.Start();
@@ -90,7 +104,33 @@ int main(int argc, char **argv) {
     }
 
     std::string file_name = argv[1];
+    if (!FileExists(file_name)) {
+        printf("could not find file '%s'\n", file_name.c_str());
+        return 0;
+    }
+
     std::string predicate_name = argv[2];
+    if (!FileExists(predicate_name)) {
+        printf("could not find predicate '%s'\n", predicate_name.c_str());
+        return 0;
+    }
+
+#if defined(_WIN64)
+    std::string run_predicate_command = predicate_name;
+#elif defined(__linux__)
+    std::string run_predicate_command = "./" + predicate_name;
+#else
+    std::string run_predicate_command;
+    printf("unknown operating system\n");
+    return 0;
+#endif
+
+    int return_code = system(run_predicate_command.c_str());
+    if (return_code != 0) {
+        printf("predicate returns %d\n", return_code);
+        return 0;
+    }
+
     AlgorithmType algorithm_type = ALGO_GENERALIZED_BINARY_REDUCTION;
     if (argc == 4) {
         const char *algo = argv[3];
@@ -115,15 +155,9 @@ int main(int argc, char **argv) {
     printf("predicate: %s\n", predicate_name.c_str());
     printf("algorithm: %s\n", ToString(algorithm_type));
 
-    std::string run_predicate_command = predicate_name + " >NUL";
-    int return_code = system(run_predicate_command.c_str());
-    if (return_code != 0) {
-        printf("predicate returns %d\n", return_code);
-        return 0;
-    }
-
-    std::string reduced_file_name = "Reduced_" + file_name;
+    std::string saved_file_name  = file_name + ".orig";
     std::string source_code = ReadFile(file_name);
+    WriteFile(saved_file_name, source_code);
 
     TSParser *parser = ts_parser_new();
     ts_parser_set_language(parser, tree_sitter_c());
@@ -153,13 +187,9 @@ int main(int argc, char **argv) {
         }
     }
 
-    std::string reduced_source_code = ReadFile(file_name);
-    WriteFile(file_name, source_code);
-    WriteFile(reduced_file_name, reduced_source_code);
 
     timer.Stop();
     printf("\n");
     printf("Finished in %llums\n", timer.ElapsedMilliseconds());
-    printf("Reduced file name: %s\n", reduced_file_name.c_str());
     return 0;
 }

@@ -1,11 +1,7 @@
 #include "DeltaDebugging.hpp"
-#include "Timer.hpp"
 #include <fstream>
 #include <string>
 #include <vector>
-
-
-static Timer predicate_timer;
 
 
 static size_t Max(size_t a, size_t b) {
@@ -61,7 +57,7 @@ static void DeltaDebugging(AlgorithmParams params, std::vector<Ast *> nodes, siz
             partitions[i][j]->flags |= AST_IS_ACTIVE;
         }
 
-        if (IsPredicateSuccessful(params, predicate_timer)) {
+        if (IsPredicateSuccessful(params)) {
             DeltaDebugging(params, partitions[i], 2);
             return;
         }
@@ -83,7 +79,7 @@ static void DeltaDebugging(AlgorithmParams params, std::vector<Ast *> nodes, siz
                 partitions[i][j]->flags &= ~AST_IS_ACTIVE;
             }
 
-            if (IsPredicateSuccessful(params, predicate_timer)) {
+            if (IsPredicateSuccessful(params)) {
                 std::vector<Ast *> new_nodes;
                 for (size_t j = 0; j < partitions.size(); ++j) {
                     if (j == i) {
@@ -111,10 +107,6 @@ static void DeltaDebugging(AlgorithmParams params, std::vector<Ast *> nodes, siz
 }
 
 void DeltaDebugging(AlgorithmParams params, std::vector<Ast *> nodes) {
-    Timer timer;
-    timer.Start();
-    predicate_timer.Reset();
     DeltaDebugging(params, nodes, 2);
-    timer.Stop();
-    //printf("DeltaDebugging finished in %llums (%llums spent calling Predicate.sh)\n", timer.ElapsedMilliseconds(), predicate_timer.ElapsedMilliseconds());
+    AstWriteToFile(params.root_node, params.file_name);
 }

@@ -1,6 +1,7 @@
 #include "BinaryReduction.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <unordered_map>
 
 
@@ -12,7 +13,6 @@ static void FindDependencies(std::vector<Ast *> function_defs) {
         Ast *identifier_leaf = AstFindChild(static_cast<Branch *>(function_declarator), "identifier");
         const char *function_identifier = static_cast<Leaf *>(identifier_leaf)->value;
         identifier_to_function.insert({ function_identifier, function });
-//        printf("%p %s\n", static_cast<void *>(function), function_identifier);
     }
 
     for (size_t i = 0; i < function_defs.size(); ++i) {
@@ -79,7 +79,6 @@ static size_t BinarySearch(AlgorithmParams params, std::vector<std::vector<Ast *
     size_t min_idx = 0;
     while (min_idx < max_idx) {
         size_t mid_idx = (min_idx + max_idx) >> 1;
-//        printf("%zu %zu %zu\n", min_idx, mid_idx, max_idx);
         for (size_t i = min_idx; i <= mid_idx; ++i) {
             for (size_t j = 0; j < closures[i].size(); ++j) {
                 closures[i][j]->flags |= AST_IS_ACTIVE;
@@ -93,11 +92,9 @@ static size_t BinarySearch(AlgorithmParams params, std::vector<std::vector<Ast *
         }
 
         if (IsPredicateSuccessful(params)) {
-//            printf("predicate passed\n");
             max_idx = mid_idx;
         }
         else {
-//            printf("predicate failed\n");
             min_idx = mid_idx + 1;
         }
     }
@@ -110,17 +107,9 @@ void BinaryReduction(AlgorithmParams params, std::vector<Ast *> function_defs) {
     std::vector<std::vector<Ast *>> closures = FindClosures(function_defs);
     std::vector<std::vector<Ast *>> final_set;
     std::sort(closures.begin(), closures.end(), [](const std::vector<Ast *> &a, const std::vector<Ast *> &b) { return a.size() < b.size(); });
-    for (size_t i = 0; i < closures.size(); ++i) {
-//        printf("\nclosure %zu\n", i);
-        for (size_t j = 0; j < closures[i].size(); ++j) {
-//            printf("%p\n", static_cast<void *>(closures[i][j]));
-        }
-    }
-
     size_t max_idx = closures.size() - 1;
     while (max_idx > 0) {
         max_idx = BinarySearch(params, closures, max_idx);
-//        printf("Adding %zu\n", max_idx);
         final_set.push_back(closures[max_idx]);
         for (size_t i = 0; i < closures.size(); ++i) {
             for (size_t j = 0; j < closures[i].size(); ++j) {
