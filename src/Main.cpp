@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
     }
 
 #if defined(_WIN64)
-    std::string run_predicate_command = predicate_name;
+    std::string run_predicate_command = predicate_name + " >NUL";
 #elif defined(__linux__)
     std::string run_predicate_command = "./" + predicate_name;
 #else

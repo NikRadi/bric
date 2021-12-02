@@ -25,14 +25,14 @@ class Benchmark:
 
 
 COLUMNS: Iterable[str] = [variable_name for variable_name in Benchmark.__dataclass_fields__]
-TOOLS: Tuple[str, Iterable[str]] = [
-    ("creduce", ["creduce", "PredicateWrapper.sh", "Main.c"]),
-    ("perses", ["java", "-jar", "../perses_deploy.jar", "--test-script", "PredicateWrapper.sh", "--input-file", "Main.c", "--in-place", "true"]),
-    ("bric-ddmin", ["../bric", "Main.c", "PredicateWrapper.sh", "-ddmin"]),
-    ("bric-hdd", ["../bric", "Main.c", "PredicateWrapper.sh", "-hdd"]),
-    ("bric-br", ["../bric", "Main.c", "PredicateWrapper.sh", "-br"]),
-    ("bric-gbr", ["../bric", "Main.c", "PredicateWrapper.sh", "-gbr"]),
-]
+REDUCERS: dict[str, Iterable[str]] = {
+    "creduce":      ["creduce", "PredicateWrapper.sh", "Main.c"],
+    "perses":       ["java", "-jar", "../perses_deploy.jar", "--test-script", "PredicateWrapper.sh", "--input-file", "Main.c", "--in-place", "true"],
+    "bric-ddmin":   ["../bric", "Main.c", "PredicateWrapper.sh", "-ddmin"],
+    "bric-hdd":     ["../bric", "Main.c", "PredicateWrapper.sh", "-hdd"],
+    "bric-br":      ["../bric", "Main.c", "PredicateWrapper.sh", "-br"],
+    "bric-gbr":     ["../bric", "Main.c", "PredicateWrapper.sh", "-gbr"],
+}
 
 
 def find_file_size(file_name: str) -> Tuple[int, int, int]:
@@ -76,10 +76,10 @@ if __name__ == "__main__":
 
         # Have a copy of the original "Main.c". The tools may change "Main.c".
         shutil.copyfile("Main.c", "OriginalMain.c")
-        for tool in TOOLS:
-            print(f"{subdir_name} {tool[0]}")
+        for reducer_name in REDUCERS.keys():
+            print(f"{subdir_name} {reducer_name}")
             main_path = os.path.join(subdir, "Main.c")
-            benchmark = Benchmark(subdir_name, tool[0])
+            benchmark = Benchmark(subdir_name, reducer_name)
             shutil.copyfile("OriginalMain.c", "Main.c")
 
             # Finding the size of the "Main.c" file could be done outside
@@ -92,7 +92,7 @@ if __name__ == "__main__":
             if os.path.isfile("Main.c"):
                 time_before = time.time()
                 result = subprocess.run(
-                    tool[1],
+                    REDUCERS[reducer_name],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                     env=environment
                 )
@@ -107,8 +107,8 @@ if __name__ == "__main__":
                 if os.path.isfile("output.csv"):
                     output = pd.read_csv("output.csv", header=None)
                     benchmark.predicate_calls = len(output.index)
-                    benchmark.failed_compiles = len(output.loc[output[3] == 3].values)
-                    benchmark.failed_runs = len((output.loc[(output[3] == 0) & (output[4] == 1)].values))
+                    benchmark.failed_compiles = len(output.loc[output[3] == 1].values)
+                    benchmark.failed_runs = len(output.loc[(output[3] == 0) & (output[4] == 1)].values)
                     os.remove("output.csv")
                 else:
                     print("missing output.csv")

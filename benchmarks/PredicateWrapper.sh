@@ -5,8 +5,7 @@ BEFORE=`date +%n`
 SIZE_BYTES=`wc -c < Main.c`
 gcc Main.c
 COMPILES="$?"
-if [ $COMPILES -eq 0 ]
-then
+if [ $COMPILES -eq 0 ] then
     $PREDICATE_NAME
     RUNS="$?"
 else
