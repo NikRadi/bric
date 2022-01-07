@@ -11,6 +11,13 @@ static void FindDependencies(std::vector<Ast *> function_defs) {
         Branch *function = static_cast<Branch *>(function_defs[i]);
         Ast *function_declarator = AstFindChild(function, "function_declarator");
         Ast *identifier_leaf = AstFindChild(static_cast<Branch *>(function_declarator), "identifier");
+        if (identifier_leaf == NULL) {
+            Ast *decl = AstFindChild(static_cast<Branch *>(function_declarator), "parenthesized_declarator");
+            assert(decl != NULL);
+            identifier_leaf = AstFindChild(static_cast<Branch *>(decl), "identifier");
+        }
+
+        assert(identifier_leaf != NULL);
         const char *function_identifier = static_cast<Leaf *>(identifier_leaf)->value;
         identifier_to_function.insert({ function_identifier, function });
     }

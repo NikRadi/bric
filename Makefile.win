@@ -10,10 +10,9 @@ IGNOREWARNINGS=-Wno-zero-as-null-pointer-constant -Wno-c++98-compat-pedantic -Wn
 
 
 # /I							 		Add directory to include search path.
-# /O2									Optimize for speed.
 # /Wall									Enable all diagnostics.
 # /Zi									Makes it possible to use the Visual Studio debugger
-#CLANGFLAGS=/I lib /O2 /Wall /Zi $(IGNOREWARNINGS)
+#CLANGFLAGS=/I lib /Wall /Zi $(IGNOREWARNINGS)
 CLANGFLAGS=/I lib /Wall /Zi $(IGNOREWARNINGS)
 
 

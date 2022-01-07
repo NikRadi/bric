@@ -3,7 +3,9 @@
 #include <cassert>
 #include <cstring>
 #include <fstream>
+#include <regex>
 #include <stack>
+#include <string>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -38,13 +40,19 @@ struct CallExpr : public Node {
     char *identifier;
 };
 
+// Code belonging to a function definition with identifier 'A'
 // [A()!code]
+// Dependencies:
+// - [A()!code] => [A()]
+// - [A()!code] => [B()]
 struct FunctionCode : public Node {
     std::vector<Node *> dependencies; // Nodes that this FunctionCode depends on
     std::vector<Node *> children;
 };
 
+// Function definition with identifier 'A'
 // [A()]
+// Has no dependencies
 struct FunctionDef : public Node {
     std::vector<Node *> dependers; // Nodes that depend on this FunctionDef
     char *identifier;
@@ -56,86 +64,86 @@ struct FunctionDef : public Node {
 static Node *InitAst(TSNode ts_node, const char *source_code, uint32_t &prev_end_byte);
 
 
-static void Print(Node *node) {
-    if (node->type == NODE_FUNCTION_CODE) {
-        FunctionCode *f = static_cast<FunctionCode *>(node);
-        FunctionDef *d = static_cast<FunctionDef *>(f->dependencies[0]);
-        printf("[%s()!code]", d->identifier);
-    }
-    else if (node->type == NODE_FUNCTION_DEF) {
-        FunctionDef *f = static_cast<FunctionDef *>(node);
-        printf("[%s()]", f->identifier);
-    }
+// static void Print(Node *node) {
+//     if (node->type == NODE_FUNCTION_CODE) {
+//         FunctionCode *f = static_cast<FunctionCode *>(node);
+//         FunctionDef *d = static_cast<FunctionDef *>(f->dependencies[0]);
+//         printf("[%s()!code]", d->identifier);
+//     }
+//     else if (node->type == NODE_FUNCTION_DEF) {
+//         FunctionDef *f = static_cast<FunctionDef *>(node);
+//         printf("[%s()]", f->identifier);
+//     }
+// }
+
+// template <class T>
+// static void Print(std::vector<T> vector) {
+//     printf("{");
+//     if (vector.size() > 0) {
+//         Print(vector[0]);
+//         for (size_t i = 1; i < vector.size(); ++i) {
+//             printf(", ");
+//             Print(vector[i]);
+//         }
+//     }
+
+//     printf("}");
+// }
+
+static void PrintXml(Node *node) {
+   static int indent = 0;
+   for (int i = 0; i < indent; ++i) printf(" ");
+   if (node->type == NODE_LEAF) {
+       LeafNode *l = static_cast<LeafNode *>(node);
+       printf("<Leaf pre_value=\"%s\" value=\"%s\"/>\n", l->pre_value, l->value);
+   }
+   else if (node->type == NODE_BRANCH) {
+       assert(node->type == NODE_BRANCH);
+       BranchNode *b = static_cast<BranchNode *>(node);
+       printf("<Branch>\n");
+       indent += 4;
+       for (size_t i = 0; i < b->children.size(); ++i) {
+           PrintXml(b->children[i]);
+       }
+
+       indent -= 4;
+       for (int i = 0; i < indent; ++i) printf(" ");
+       printf("<Branch/>\n");
+   }
+   else if (node->type == NODE_CALL_EXPR) {
+       CallExpr *c = static_cast<CallExpr *>(node);
+       printf("<CallExpr identifier=\"%s\">\n", c->identifier);
+       indent += 4;
+       for (size_t i = 0; i < c->children.size(); ++i) {
+           PrintXml(c->children[i]);
+       }
+
+       indent -= 4;
+       for (int i = 0; i < indent; ++i) printf(" ");
+       printf("<CallExpr/>\n");
+   }
+   else if (node->type == NODE_FUNCTION_CODE) {
+       FunctionCode *f = static_cast<FunctionCode *>(node);
+       printf("<FunctionCode>\n");
+       indent += 4;
+       for (size_t i = 0; i < f->children.size(); ++i) {
+           PrintXml(f->children[i]);
+       }
+
+       indent -= 4;
+       for (int i = 0; i < indent; ++i) printf(" ");
+       printf("<FunctionCode/>\n");
+   }
+   else if (node->type == NODE_FUNCTION_DEF) {
+       FunctionDef *f = static_cast<FunctionDef *>(node);
+       printf("<FunctionDef identifier=\"%s\" value=\"%s\">\n", f->identifier, f->value);
+       indent += 4;
+       PrintXml(static_cast<Node *>(f->code));
+       indent -= 4;
+       for (int i = 0; i < indent; ++i) printf(" ");
+       printf("<FunctionDef/>\n");
+   }
 }
-
-template <class T>
-static void Print(std::vector<T> vector) {
-    printf("{");
-    if (vector.size() > 0) {
-        Print(vector[0]);
-        for (size_t i = 1; i < vector.size(); ++i) {
-            printf(", ");
-            Print(vector[i]);
-        }
-    }
-
-    printf("}");
-}
-
-//static void PrintXml(Node *node) {
-//    static int indent = 0;
-//    for (int i = 0; i < indent; ++i) printf(" ");
-//    if (node->type == NODE_LEAF) {
-//        LeafNode *l = static_cast<LeafNode *>(node);
-//        printf("<Leaf pre_value=\"%s\" value=\"%s\"/>\n", l->pre_value, l->value);
-//    }
-//    else if (node->type == NODE_BRANCH) {
-//        assert(node->type == NODE_BRANCH);
-//        BranchNode *b = static_cast<BranchNode *>(node);
-//        printf("<Branch>\n");
-//        indent += 4;
-//        for (size_t i = 0; i < b->children.size(); ++i) {
-//            PrintXml(b->children[i]);
-//        }
-//
-//        indent -= 4;
-//        for (int i = 0; i < indent; ++i) printf(" ");
-//        printf("<Branch/>\n");
-//    }
-//    else if (node->type == NODE_CALL_EXPR) {
-//        CallExpr *c = static_cast<CallExpr *>(node);
-//        printf("<CallExpr identifier=\"%s\">\n", c->identifier);
-//        indent += 4;
-//        for (size_t i = 0; i < c->children.size(); ++i) {
-//            PrintXml(c->children[i]);
-//        }
-//
-//        indent -= 4;
-//        for (int i = 0; i < indent; ++i) printf(" ");
-//        printf("<CallExpr/>\n");
-//    }
-//    else if (node->type == NODE_FUNCTION_CODE) {
-//        FunctionCode *f = static_cast<FunctionCode *>(node);
-//        printf("<FunctionCode>\n");
-//        indent += 4;
-//        for (size_t i = 0; i < f->children.size(); ++i) {
-//            PrintXml(f->children[i]);
-//        }
-//
-//        indent -= 4;
-//        for (int i = 0; i < indent; ++i) printf(" ");
-//        printf("<FunctionCode/>\n");
-//    }
-//    else if (node->type == NODE_FUNCTION_DEF) {
-//        FunctionDef *f = static_cast<FunctionDef *>(node);
-//        printf("<FunctionDef identifier=\"%s\" value=\"%s\">\n", f->identifier, f->value);
-//        indent += 4;
-//        PrintXml(static_cast<Node *>(f->code));
-//        indent -= 4;
-//        for (int i = 0; i < indent; ++i) printf(" ");
-//        printf("<FunctionDef/>\n");
-//    }
-//}
 
 static void WriteToFile(Node *node, std::ofstream &ofstream) {
     if (!node->is_active) {
@@ -169,14 +177,9 @@ static void WriteToFile(Node *node, std::ofstream &ofstream) {
         case NODE_FUNCTION_DEF: {
             FunctionDef *f = static_cast<FunctionDef *>(node);
             ofstream << f->value;
-            ofstream << " {";
+            ofstream << "{";
             WriteToFile(f->code, ofstream);
-            if (f->code->children.size() <= 1) {
-                ofstream << " }\n";
-            }
-            else {
-                ofstream << "\n}\n";
-            }
+            ofstream << "\n}\n";
         } break;
     }
 }
@@ -199,6 +202,32 @@ static char *DuplicateString(const char *str, uint32_t start_byte, uint32_t end_
     result[num_bytes] = '\0';
     strncpy(result, str + start_byte, num_bytes);
     return result;
+}
+
+static char *FindAndReplaceAll(char *str, const char *from, const char *to) {
+    std::string s(str);
+    std::string f(from);
+    std::string t(to);
+    auto reg = std::regex(f);
+    std::string result = std::regex_replace(s, reg, t);
+    if (result != std::string(str)) {
+        while (true) {
+            std::string new_result = std::regex_replace(result, reg, t);
+            if (new_result == result) {
+                break;
+            }
+
+            result = new_result;
+        }
+    }
+
+    return DuplicateString(result.c_str(), 0, static_cast<uint32_t>(result.length()));
+}
+
+static char *FindAndErase(char *str, char c) {
+    std::string s(str);
+    s.erase(std::remove(s.begin(), s.end(), c), s.end());
+    return DuplicateString(s.c_str(), 0, static_cast<uint32_t>(s.length()));
 }
 
 static void FindChildren(Node *node, NodeType node_type, std::vector<Node *> &nodes) {
@@ -246,7 +275,6 @@ static TSNode FindChild(TSNode ts_node, const char *type) {
         }
     }
 
-    assert(false);
     return { };
 }
 
@@ -292,7 +320,15 @@ static FunctionDef *InitFunctionDef(TSNode ts_node, const char *source_code, uin
     function_def->is_active = true;
 
     TSNode function_declarator = FindChild(ts_node, "function_declarator");
+    assert(!ts_node_is_null(function_declarator));
     TSNode identifier = FindChild(function_declarator, "identifier");
+    if (ts_node_is_null(identifier)) {
+        TSNode decl = FindChild(function_declarator, "parenthesized_declarator");
+        assert(!ts_node_is_null(decl));
+        identifier = FindChild(decl, "identifier");
+    }
+
+    assert(!ts_node_is_null(identifier));
     function_def->identifier = GetValue(identifier, source_code);
 
     // Since the last child is of type 'compound_statement',
@@ -326,9 +362,17 @@ static Node *InitAst(TSNode ts_node, const char *source_code, uint32_t &prev_end
 
         uint32_t start_byte = ts_node_start_byte(ts_node);
         uint32_t end_byte = ts_node_end_byte(ts_node);
-        leaf_node->pre_value = DuplicateString(source_code, prev_end_byte, start_byte);
-        leaf_node->value = DuplicateString(source_code, start_byte, end_byte);
+        char *pre_value = DuplicateString(source_code, prev_end_byte, start_byte);
+        uint32_t num_bytes_in_pre_value = start_byte - prev_end_byte;
+        if (num_bytes_in_pre_value > 0) {
+            leaf_node->pre_value = FindAndErase(pre_value, '}');
+            leaf_node->pre_value = FindAndReplaceAll(leaf_node->pre_value, "\n\n", "\n");
+        }
+        else {
+            leaf_node->pre_value = pre_value;
+        }
 
+        leaf_node->value = DuplicateString(source_code, start_byte, end_byte);
         prev_end_byte = end_byte;
         return static_cast<Node *>(leaf_node);
     }
@@ -368,6 +412,7 @@ static void FindDependencies(Node *node, std::vector<Node *> &nodes_to_reduce) {
         f->code->dependencies.push_back(static_cast<Node *>(f));
         f->dependers.push_back(static_cast<Node *>(f->code));
 
+        // Referential semantic dependency: [A()!code] => [B()]
         std::vector<Node *> call_exprs;
         FindChildren(static_cast<Node *>(f->code), NODE_CALL_EXPR, call_exprs);
         for (size_t j = 0; j < call_exprs.size(); ++j) {
@@ -375,7 +420,6 @@ static void FindDependencies(Node *node, std::vector<Node *> &nodes_to_reduce) {
             for (size_t k = 0; k < function_defs.size(); ++k) {
                 FunctionDef *f2 = static_cast<FunctionDef *>(function_defs[k]);
                 if (strcmp(c->identifier, f2->identifier) == 0) {
-                    // Referential semantic dependency: [A()!code] => [B()]
                     auto begin = f->code->dependencies.begin();
                     auto end = f->code->dependencies.end();
                     if (std::find(begin, end, function_defs[k]) == end) {
@@ -513,11 +557,12 @@ void GeneralizedBinaryReduction(TSNode ts_root_node, const char *file_name, cons
 
     std::vector<Node *> variableorder = Postorder(nodes_to_reduce, is_visited);
     std::vector<std::vector<Node *>> d = Progression(variableorder, nodes_to_reduce, nodes_to_reduce, learned_set);
-    Print(d);
-    printf("\n");
+    // Print(d);
+    // printf("\n");
+    // PrintXml(root_node);
     do {
         size_t idx = FindSmallestSuccessfulIdx(root_node, file_name, run_predicate_command, d);
-        printf("idx: %zu\n", idx);
+        // printf("idx: %zu\n", idx);
         // It works with d[0] and the search is finished
         if (idx == 0) {
             break;

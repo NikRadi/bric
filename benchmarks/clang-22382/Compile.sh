@@ -1,0 +1,1 @@
+clang-3.6.0 -O3 -o t -m64 Main.c >$OUT_FILE 2>&1

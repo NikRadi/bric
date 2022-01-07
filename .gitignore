@@ -5,6 +5,8 @@ Reduced_Test.c
 setup_msvc.bat
 Test.c
 Test.save.c
+d.bat
+start_jupyter.sh
 *.exe
 *.obj
 *.swp
@@ -13,3 +15,4 @@ Test.save.c
 lib/
 .vs/
 .vscode/
+temp/
