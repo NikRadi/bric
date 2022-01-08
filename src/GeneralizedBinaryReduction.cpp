@@ -409,12 +409,19 @@ static Node *InitAst(TSNode ts_node, const char *source_code, uint32_t &prev_end
         return static_cast<Node *>(InitForLoop(ts_node, source_code, prev_end_byte));
     }
 
-    if (strcmp(node_type, "call_expression") == 0) {
-        return static_cast<Node *>(InitCallExpr(ts_node, source_code, prev_end_byte));
-    }
-
     if (strcmp(node_type, "function_definition") == 0) {
         return static_cast<Node *>(InitFunctionDef(ts_node, source_code, prev_end_byte));
+    }
+
+    // if (strcmp(node_type, "call_expression") == 0) {
+    //     return static_cast<Node *>(InitCallExpr(ts_node, source_code, prev_end_byte));
+    // }
+    if (strcmp(node_type, "expression_statement") == 0) {
+        TSNode first_child = ts_node_child(ts_node, 0);
+        const char *first_child_type = ts_node_type(first_child);
+        if (strcmp(first_child_type, "call_expression") == 0) {
+            return static_cast<Node *>(InitCallExpr(ts_node, source_code, prev_end_byte));
+        }
     }
 
     uint32_t num_children = ts_node_child_count(ts_node);
@@ -516,7 +523,7 @@ static void FindDependencies(Node *node, std::vector<Node *> &nodes_to_reduce) {
         std::vector<Node *> call_exprs;
         FindChildren(static_cast<Node *>(f->code), NODE_CALL_EXPR, call_exprs);
         for (size_t j = 0; j < call_exprs.size(); ++j) {
-            // nodes_to_reduce.push_back(call_exprs[j]);
+            nodes_to_reduce.push_back(call_exprs[j]);
             CallExpr *c = static_cast<CallExpr *>(call_exprs[j]);
 
             // Syntactic dependency: [A()!code$B()] => [A()!code]
