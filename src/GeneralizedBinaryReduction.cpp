@@ -23,6 +23,7 @@ enum NodeType {
     NODE_FUNCTION_DEF,
     NODE_IF_STATEMENT,
     NODE_FOR_LOOP,
+    NODE_VARIABLE_ASSIGNMENT,
 };
 
 struct Node {
@@ -97,76 +98,111 @@ struct ForLoop : public Node {
     std::vector<Node *> dependencies;
 };
 
+struct VariableAssignment : public Node {
+    VariableAssignment() { type = NODE_VARIABLE_ASSIGNMENT; }
+    std::vector<Node *> children;
+    std::vector<Node *> dependencies;
+    char *identifier;
+};
+
 
 static Node *InitAst(TSNode ts_node, const char *source_code, uint32_t &prev_end_byte);
 
 
-static void PrintXml(Node *node) {
-    if (!node->is_active) return;
-    static int indent = 0;
-    for (int i = 0; i < indent; ++i) printf(" ");
-    if (node->type == NODE_LEAF) {
-        LeafNode *l = static_cast<LeafNode *>(node);
-        printf("<Leaf pre_value=\"%s\" value=\"%s\"/>\n", l->pre_value, l->value);
-    }
-    else if (node->type == NODE_BRANCH) {
-        assert(node->type == NODE_BRANCH);
-        BranchNode *b = static_cast<BranchNode *>(node);
-        printf("<Branch>\n");
-        indent += 4;
-        for (size_t i = 0; i < b->children.size(); ++i) {
-            PrintXml(b->children[i]);
-        }
+// static void PrintXml(Node *node) {
+//     if (!node->is_active) return;
+//     static int indent = 0;
+//     for (int i = 0; i < indent; ++i) printf(" ");
+//     if (node->type == NODE_LEAF) {
+//         LeafNode *l = static_cast<LeafNode *>(node);
+//         printf("<Leaf pre_value=\"%s\" value=\"%s\"/>\n", l->pre_value, l->value);
+//     }
+//     else if (node->type == NODE_BRANCH) {
+//         assert(node->type == NODE_BRANCH);
+//         BranchNode *b = static_cast<BranchNode *>(node);
+//         printf("<Branch>\n");
+//         indent += 4;
+//         for (size_t i = 0; i < b->children.size(); ++i) {
+//             PrintXml(b->children[i]);
+//         }
 
-        indent -= 4;
-        for (int i = 0; i < indent; ++i) printf(" ");
-        printf("<Branch/>\n");
-    }
-    else if (node->type == NODE_CALL_EXPR) {
-        CallExpr *c = static_cast<CallExpr *>(node);
-        printf("<CallExpr identifier=\"%s\">\n", c->identifier);
-        indent += 4;
-        for (size_t i = 0; i < c->children.size(); ++i) {
-            PrintXml(c->children[i]);
-        }
+//         indent -= 4;
+//         for (int i = 0; i < indent; ++i) printf(" ");
+//         printf("<Branch/>\n");
+//     }
+//     else if (node->type == NODE_CALL_EXPR) {
+//         CallExpr *c = static_cast<CallExpr *>(node);
+//         printf("<CallExpr identifier=\"%s\">\n", c->identifier);
+//         indent += 4;
+//         for (size_t i = 0; i < c->children.size(); ++i) {
+//             PrintXml(c->children[i]);
+//         }
 
-        indent -= 4;
-        for (int i = 0; i < indent; ++i) printf(" ");
-        printf("<CallExpr/>\n");
-    }
-    else if (node->type == NODE_FUNCTION_CODE) {
-        FunctionCode *f = static_cast<FunctionCode *>(node);
-        printf("<FunctionCode>\n");
-        indent += 4;
-        for (size_t i = 0; i < f->children.size(); ++i) {
-            PrintXml(f->children[i]);
-        }
+//         indent -= 4;
+//         for (int i = 0; i < indent; ++i) printf(" ");
+//         printf("<CallExpr/>\n");
+//     }
+//     else if (node->type == NODE_FUNCTION_CODE) {
+//         FunctionCode *f = static_cast<FunctionCode *>(node);
+//         printf("<FunctionCode>\n");
+//         indent += 4;
+//         for (size_t i = 0; i < f->children.size(); ++i) {
+//             PrintXml(f->children[i]);
+//         }
 
-        indent -= 4;
-        for (int i = 0; i < indent; ++i) printf(" ");
-        printf("<FunctionCode/>\n");
-    }
-    else if (node->type == NODE_FUNCTION_DEF) {
-        FunctionDef *f = static_cast<FunctionDef *>(node);
-        printf("<FunctionDef identifier=\"%s\" value=\"%s\">\n", f->identifier, f->value);
-        indent += 4;
-        PrintXml(static_cast<Node *>(f->code));
-        indent -= 4;
-        for (int i = 0; i < indent; ++i) printf(" ");
-        printf("<FunctionDef/>\n");
-    }
-    else if (node->type == NODE_IF_STATEMENT) {
-        IfStatement *f = static_cast<IfStatement *>(node);
-        printf("<IfStatement>\n");
-        indent += 4;
-        for (size_t i = 0; i < f->children.size(); ++i) {
-            PrintXml(f->children[i]);
-        }
+//         indent -= 4;
+//         for (int i = 0; i < indent; ++i) printf(" ");
+//         printf("<FunctionCode/>\n");
+//     }
+//     else if (node->type == NODE_FUNCTION_DEF) {
+//         FunctionDef *f = static_cast<FunctionDef *>(node);
+//         printf("<FunctionDef identifier=\"%s\" value=\"%s\">\n", f->identifier, f->value);
+//         indent += 4;
+//         PrintXml(static_cast<Node *>(f->code));
+//         indent -= 4;
+//         for (int i = 0; i < indent; ++i) printf(" ");
+//         printf("<FunctionDef/>\n");
+//     }
+//     else if (node->type == NODE_IF_STATEMENT) {
+//         IfStatement *f = static_cast<IfStatement *>(node);
+//         printf("<IfStatement>\n");
+//         indent += 4;
+//         for (size_t i = 0; i < f->children.size(); ++i) {
+//             PrintXml(f->children[i]);
+//         }
 
-        indent -= 4;
-        for (int i = 0; i < indent; ++i) printf(" ");
-        printf("<IfStatement/>\n");
-    }
+//         indent -= 4;
+//         for (int i = 0; i < indent; ++i) printf(" ");
+//         printf("<IfStatement/>\n");
+//     }
+// }
+
+static void PrintXml(TSNode node, const char *source_code) {
+   static int indent = 0;
+   for (int i = 0; i < indent; ++i) printf(" ");
+   const char *node_type = ts_node_type(node);
+   uint32_t num_children = ts_node_child_count(node);
+   if (num_children == 0) {
+       uint32_t start_byte = ts_node_start_byte(node);
+       uint32_t end_byte = ts_node_end_byte(node);
+       uint32_t num_bytes = end_byte - start_byte;
+       char *node_value = new char[num_bytes + 1];
+       node_value[num_bytes] = '\0';
+       strncpy(node_value, source_code + start_byte, num_bytes);
+       printf("<%s value=\"%s\"/>\n", node_type, node_value);
+   }
+   else {
+       printf("<%s>\n", node_type);
+       indent += 4;
+       for (uint32_t i = 0; i < num_children; ++i) {
+           TSNode child = ts_node_child(node, i);
+           PrintXml(child, source_code);
+       }
+
+       indent -= 4;
+       for (int i = 0; i < indent; ++i) printf(" ");
+       printf("<%s/>\n", node_type);
+   }
 }
 
 static void WriteToFile(Node *node, std::ofstream &ofstream) {
@@ -214,6 +250,12 @@ static void WriteToFile(Node *node, std::ofstream &ofstream) {
         } break;
         case NODE_FOR_LOOP: {
             ForLoop *i = static_cast<ForLoop *>(node);
+            for (auto child : i->children) {
+                WriteToFile(child, ofstream);
+            }
+        } break;
+        case NODE_VARIABLE_ASSIGNMENT: {
+            VariableAssignment *i = static_cast<VariableAssignment *>(node);
             for (auto child : i->children) {
                 WriteToFile(child, ofstream);
             }
@@ -354,6 +396,42 @@ static ForLoop *InitForLoop(TSNode ts_node, const char *source_code, uint32_t &p
     return for_loop;
 }
 
+static TSNode FindVariableAssignmentIdentifierNode(TSNode node, const char *source_code) {
+    const char *type = ts_node_type(node);
+    if (strcmp(type, "identifier") == 0) {
+        return node;
+    }
+    else if (strcmp(type, "assignment_expression") == 0 ||
+             strcmp(type, "subscript_expression") == 0 ||
+             strcmp(type, "field_expression") == 0) {
+        return FindVariableAssignmentIdentifierNode(ts_node_child(node, 0), source_code);
+    }
+    else {
+        PrintXml(node, source_code);
+        printf("%s\n", type);
+        assert(false);
+        return {};
+    }
+}
+
+static char *FindVariableAssignmentIdentifier(TSNode node, const char *source_code) {
+}
+
+static VariableAssignment *InitVariableAssignment(TSNode ts_node, const char *source_code, uint32_t &prev_end_byte) {
+    VariableAssignment *variable_assignment = new VariableAssignment;
+    TSNode n = FindVariableAssignmentIdentifierNode(ts_node_child(ts_node, 0), source_code);
+    variable_assignment->identifier = GetValue(n, source_code);
+
+    uint32_t num_children = ts_node_child_count(ts_node);
+    for (uint32_t i = 0; i < num_children; ++i) {
+        TSNode ts_child = ts_node_child(ts_node, i);
+        Node *child = InitAst(ts_child, source_code, prev_end_byte);
+        variable_assignment->children.push_back(child);
+    }
+
+    return variable_assignment;
+}
+
 static FunctionCode *InitFunctionCode(TSNode ts_node, const char *source_code, uint32_t &prev_end_byte) {
     FunctionCode *function_code = new FunctionCode;
 
@@ -413,14 +491,20 @@ static Node *InitAst(TSNode ts_node, const char *source_code, uint32_t &prev_end
         return static_cast<Node *>(InitFunctionDef(ts_node, source_code, prev_end_byte));
     }
 
-    // if (strcmp(node_type, "call_expression") == 0) {
-    //     return static_cast<Node *>(InitCallExpr(ts_node, source_code, prev_end_byte));
-    // }
     if (strcmp(node_type, "expression_statement") == 0) {
-        TSNode first_child = ts_node_child(ts_node, 0);
-        const char *first_child_type = ts_node_type(first_child);
-        if (strcmp(first_child_type, "call_expression") == 0) {
+        TSNode c1 = ts_node_child(ts_node, 0);
+        const char *t1 = ts_node_type(c1);
+        if (strcmp(t1, "call_expression") == 0) {
             return static_cast<Node *>(InitCallExpr(ts_node, source_code, prev_end_byte));
+        }
+
+        if (strcmp(t1, "assignment_expression") == 0) {
+            return static_cast<Node *>(InitVariableAssignment(ts_node, source_code, prev_end_byte));
+            // TSNode c2 = ts_node_child(c1, 0);
+            // const char *t2 = ts_node_type(c2);
+            // if (strcmp(t2, "identifier") == 0) {
+            //     return static_cast<Node *>(InitVariableAssignment(ts_node, source_code, prev_end_byte));
+            // }
         }
     }
 
@@ -470,9 +554,11 @@ static std::vector<Node *> *GetDependencies(Node *node) {
         case NODE_FOR_LOOP: {
             return &static_cast<ForLoop *>(node)->dependencies;
         }
+        case NODE_VARIABLE_ASSIGNMENT: {
+            return &static_cast<VariableAssignment *>(node)->dependencies;
+        }
+        default: return NULL;
     }
-
-    return NULL;
 }
 
 static void AddDependencies(std::vector<Node *> &list, Node *node) {
@@ -518,6 +604,14 @@ static void FindDependencies(Node *node, std::vector<Node *> &nodes_to_reduce) {
             fl->dependencies.push_back(static_cast<Node *>(f->code));
             nodes_to_reduce.push_back(for_loop);
             f->code->dependers.push_back(for_loop);
+        }
+
+        std::vector<Node *> variable_assignments;
+        FindChildren(static_cast<Node *>(f), NODE_VARIABLE_ASSIGNMENT, variable_assignments);
+        for (auto variable_assignment : variable_assignments) {
+            nodes_to_reduce.push_back(variable_assignment);
+            VariableAssignment *n = static_cast<VariableAssignment *>(variable_assignment);
+            n->dependencies.push_back(static_cast<Node *>(f->code));
         }
 
         std::vector<Node *> call_exprs;
