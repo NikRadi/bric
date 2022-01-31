@@ -3,73 +3,33 @@
 #include "DeltaDebugging.hpp"
 #include "GeneralizedBinaryReduction.hpp"
 #include "HierarchicalDeltaDebugging.hpp"
-#include <cassert>
-#include <cstdio>
-#include <cstring>
-#include <fstream>
-#include <streambuf>
-#include <string>
 #include "Timer.hpp"
+#include <cstdio>
+#include <fstream>
 #include <tree_sitter/api.h>
+#include <string>
 
 
 extern "C" TSLanguage *tree_sitter_c();
 static const char *HELP_STR = ""
-    "bric <file_name> <predicate_name> [options]\n"
+    "bric <file_name> <predicate_name> [algorithm]\n"
     "\n"
-    "options:\n"
+    "algorithms:\n"
     "-gbr       generalized binary reduction (default)\n"
     "-ddmin     delta debugging\n"
     "-hdd       hierarchical delta debugging\n"
     "-br        binary reduction\n";
 
 
-enum AlgorithmType {
-    ALGO_DELTA_DEBUGGING,
-    ALGO_HIERARCHICAL_DELTA_DEBUGGING,
-    ALGO_BINARY_REDUCTION,
-    ALGO_GENERALIZED_BINARY_REDUCTION,
-};
-
-
-static const char *ToString(AlgorithmType type) {
-    switch (type) {
-        case ALGO_DELTA_DEBUGGING:              return "delta debugging";
-        case ALGO_HIERARCHICAL_DELTA_DEBUGGING: return "hierarchical delta debugging";
-        case ALGO_BINARY_REDUCTION:             return "binary reduction";
-        case ALGO_GENERALIZED_BINARY_REDUCTION: return "generalized binary reduction";
+static bool FileExists(std::string file_name) {
+    FILE *file = fopen(file_name.c_str(), "r");
+    if (file == NULL) {
+        return false;
     }
 
-    return "err";
+    fclose(file);
+    return true;
 }
-
-//static void PrintXml(TSNode node, const char *source_code) {
-//    static int indent = 0;
-//    for (int i = 0; i < indent; ++i) printf(" ");
-//    const char *node_type = ts_node_type(node);
-//    uint32_t num_children = ts_node_child_count(node);
-//    if (num_children == 0) {
-//        uint32_t start_byte = ts_node_start_byte(node);
-//        uint32_t end_byte = ts_node_end_byte(node);
-//        uint32_t num_bytes = end_byte - start_byte;
-//        char *node_value = new char[num_bytes + 1];
-//        node_value[num_bytes] = '\0';
-//        strncpy(node_value, source_code + start_byte, num_bytes);
-//        printf("<%s value=\"%s\"/>\n", node_type, node_value);
-//    }
-//    else {
-//        printf("<%s>\n", node_type);
-//        indent += 4;
-//        for (uint32_t i = 0; i < num_children; ++i) {
-//            TSNode child = ts_node_child(node, i);
-//            PrintXml(child, source_code);
-//        }
-//
-//        indent -= 4;
-//        for (int i = 0; i < indent; ++i) printf(" ");
-//        printf("<%s/>\n", node_type);
-//    }
-//}
 
 static std::string ReadFile(std::string file_name) {
     typedef std::istreambuf_iterator<char> istreambuf;
@@ -85,111 +45,98 @@ static void WriteFile(std::string file_name, std::string content) {
     ofstream.close();
 }
 
-static bool FileExists(std::string file_name) {
-    FILE *file = fopen(file_name.c_str(), "r");
-    if (file == NULL) {
-        return false;
+// Used only for debugging
+static void WriteToFile2(Ast *node, std::ofstream &ofstream) {
+    static size_t indent = 0;
+    ofstream << std::string(indent, ' ');
+    if (node->type == AST_TYPE_LEAF) {
+        ofstream << "<Leaf ts_type=\"";
+        ofstream << node->ts_type;
+        // ofstream << "\" pre_value=\"";
+        // ofstream << node->pre_value;
+        ofstream << "\" value=\"";
+        ofstream << node->value;
+        ofstream << "\"/>\n";
     }
+    else {
+        ofstream << "<Branch ts_type=\"";
+        ofstream << node->ts_type;
+        ofstream << "\">\n";
+        indent += 2;
+        for (auto child : node->children) {
+            WriteToFile2(child, ofstream);
+        }
 
-    fclose(file);
-    return true;
+        indent -= 2;
+        ofstream << std::string(indent, ' ');
+        ofstream << "<Branch/>\n";
+    }
 }
 
 int main(int argc, char **argv) {
-    Timer timer;
-    timer.Start();
     if (argc < 3) {
         printf("%s", HELP_STR);
         return 0;
     }
 
     std::string file_name = argv[1];
+    std::string test_name = argv[2];
+
     if (!FileExists(file_name)) {
-        printf("could not find file '%s'\n", file_name.c_str());
+        printf("could not find C file '%s'\n", file_name.c_str());
         return 0;
     }
 
-    std::string predicate_name = argv[2];
-    if (!FileExists(predicate_name)) {
-        printf("could not find predicate '%s'\n", predicate_name.c_str());
+    if (!FileExists(test_name)) {
+        printf("could not find test file '%s'\n", test_name.c_str());
         return 0;
     }
 
 #if defined(_WIN64)
-    std::string run_predicate_command = predicate_name + " >NUL";
+    std::string run_test = test_name + " >nul 2>nul";
 #elif defined(__linux__)
-    std::string run_predicate_command = "./" + predicate_name;
+    std::string run_test = "./" + test_name + " >temp.txt 2>&1";
 #else
-    std::string run_predicate_command;
     printf("unknown operating system\n");
     return 0;
 #endif
 
-    int return_code = system(run_predicate_command.c_str());
+    int return_code = system(run_test.c_str());
     if (return_code != 0) {
         printf("predicate returns %d\n", return_code);
         return 0;
     }
 
-    AlgorithmType algorithm_type = ALGO_GENERALIZED_BINARY_REDUCTION;
-    if (argc == 4) {
-        const char *algo = argv[3];
-        if (strcmp(algo, "-ddmin") == 0) {
-            algorithm_type = ALGO_DELTA_DEBUGGING;
-        }
-        else if (strcmp(algo, "-hdd") == 0) {
-            algorithm_type = ALGO_HIERARCHICAL_DELTA_DEBUGGING;
-        }
-        else if (strcmp(algo, "-br") == 0) {
-            algorithm_type = ALGO_BINARY_REDUCTION;
-        }
-        else if (strcmp(algo, "-gbr") == 0) {
-            algorithm_type = ALGO_GENERALIZED_BINARY_REDUCTION;
-        }
-        else {
-            printf("unknown option: %s\n", algo);
-        }
-    }
+    Timer timer;
+    timer.Start();
 
-    printf("file name: %s\n", file_name.c_str());
-    printf("predicate: %s\n", predicate_name.c_str());
-    printf("algorithm: %s\n", ToString(algorithm_type));
-
-    std::string saved_file_name  = file_name + ".orig";
+    std::string f_reduced = "reduced_" + file_name;
     std::string source_code = ReadFile(file_name);
-    WriteFile(saved_file_name, source_code);
+    WriteFile(f_reduced, source_code);
 
     TSParser *parser = ts_parser_new();
     ts_parser_set_language(parser, tree_sitter_c());
-    TSTree *ts_tree = ts_parser_parse_string(parser, NULL, source_code.c_str(), static_cast<uint32_t>(source_code.size()));
+    uint32_t source_code_size = static_cast<uint32_t>(source_code.size());
+    TSTree *ts_tree = ts_parser_parse_string(parser, NULL, source_code.c_str(), source_code_size);
     TSNode ts_root_node = ts_tree_root_node(ts_tree);
-//    PrintXml(ts_root_node, source_code.c_str());
-    if (algorithm_type == ALGO_GENERALIZED_BINARY_REDUCTION) {
-        GeneralizedBinaryReduction(ts_root_node, file_name.c_str(), run_predicate_command.c_str(), source_code.c_str());
-    }
-    else {
-        Ast *root_node = AstInit(ts_root_node, source_code.c_str());
-        AlgorithmParams params;
-        params.root_node = root_node;
-        params.file_name = file_name.c_str();
-        params.run_predicate_command = run_predicate_command.c_str();
+    // GeneralizedBinaryReduction(ts_root_node, file_name.c_str(), run_test.c_str(), source_code.c_str());
+    Ast *ast = AstInit(ts_root_node, source_code);
+    // printf("%d\n", Count(ast));
+    // std::ofstream ofstream("hdd.html");
+    // WriteToFile2(ast, ofstream);
+    // ofstream.close();
 
-        std::vector<Ast *> function_defs;
-        AstFindNodes(root_node, AST_TYPE_FUNCTION_DEF, function_defs);
-        if (algorithm_type == ALGO_DELTA_DEBUGGING) {
-            DeltaDebugging(params, function_defs);
-        }
-        else if (algorithm_type == ALGO_HIERARCHICAL_DELTA_DEBUGGING) {
-            HierarchicalDeltaDebugging(params);
-        }
-        else if (algorithm_type == ALGO_BINARY_REDUCTION) {
-            BinaryReduction(params, function_defs);
-        }
-    }
-
-
+    std::vector<Ast *> function_definitions;
+    FindNodes(ast, "function_definition", function_definitions);
+    // DeltaDebugging(function_definitions, ast, file_name, run_test);
+    // HierarchicalDeltaDebugging(ast, file_name, run_test);
+    BinaryReduction(function_definitions, ast, file_name, run_test);
     timer.Stop();
-    printf("\n");
-    printf("Finished in %llums\n", timer.ElapsedMilliseconds());
+
+    // std::string reduced_source_code = ReadFile(file_name);
+    // WriteFile(f_reduced, reduced_source_code);
+    // WriteFile(file_name, source_code);
+
+    printf("Finished (%llums)\n", timer.ElapsedMilliseconds());
     return 0;
 }

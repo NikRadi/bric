@@ -1,46 +1,42 @@
 #ifndef BRIC_AST_NODES_HPP
 #define BRIC_AST_NODES_HPP
+#include <string>
 #include <tree_sitter/api.h>
 #include <vector>
 
 
-enum AstFlags {
-    AST_IS_ACTIVE         = 0b0001,
-    AST_TYPE_LEAF         = 0b0010,
-    AST_TYPE_BRANCH       = 0b0100,
-    AST_TYPE_FUNCTION_DEF = 0b1100,
+enum AstType {
+    AST_TYPE_LEAF,
+    AST_TYPE_BRANCH,
 };
 
 struct Ast {
-    int flags = AST_IS_ACTIVE;
-    const char *type = NULL;
-};
-
-struct Leaf : public Ast {
-    char *pre_value;
-    char *value;
-
-    Leaf() { flags |= AST_TYPE_LEAF; }
-};
-
-struct Branch : public Ast {
+    AstType type;
+    bool is_active = true;
+    std::string ts_type;
+    std::string pre_value;
+    std::string value;
     std::vector<Ast *> children;
-    std::vector<Ast *> dependencies;
-
-    Branch() { flags |= AST_TYPE_BRANCH; }
+    std::vector<size_t> dependencies;
 };
 
 
-Ast *AstInit(TSNode root_node, const char *source_code);
+Ast *AstInit(TSNode ts_root_node, std::string source_code);
 
-void AstWriteToFile(Ast *root_node, const char *file_name);
+void WriteToFile(Ast *root_node, std::string file_name);
 
-Ast *AstFindChild(Branch *node, const char *type);
+void FindNodes(Ast *node, std::string ts_type, std::vector<Ast *> &nodes);
 
-void AstFindNodes(Ast *node, const char *type, std::vector<Ast *> &nodes);
+Ast *FindChild(Ast *node, std::string ts_type);
 
-void AstFindNodes(Ast *node, AstFlags flags, int level, std::vector<Ast *> &nodes);
+void FindActiveNodes(Ast *node, int level, std::vector<Ast *> &nodes);
 
-void AstFindNodes(Ast *node, AstFlags flags, std::vector<Ast *> &nodes);
+bool IsTestSuccessful(Ast *root_node, std::string f, std::string p);
+
+void Print(Ast *node);
+
+int Count(Ast *node);
+
+int CountActive(Ast *node);
 
 #endif // BRIC_AST_NODES_HPP

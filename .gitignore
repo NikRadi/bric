@@ -7,6 +7,7 @@ Test.c
 Test.save.c
 d.bat
 start_jupyter.sh
+plot.py
 *.exe
 *.obj
 *.swp

@@ -24,6 +24,7 @@ enum NodeType {
     NODE_IF_STATEMENT,
     NODE_FOR_LOOP,
     NODE_VARIABLE_ASSIGNMENT,
+    NODE_VARIABLE_DECLARATION,
 };
 
 struct Node {
@@ -46,12 +47,6 @@ struct BranchNode : public Node {
 
 // @remember: add struct
 
-// DISABLED:
-// Running time goes from 4s to 90s and a problem occurs:
-// e.g. int x = 2 + func_call();
-// the func_call() CallExpr will not be dependant on the int x = 2... but
-// on the function code, meaning it can remove the func_call(); while the rest remains.
-//
 // Code in function definition with identifier 'A' calling function definition with identifier 'B'
 // [A()!code$B()]
 // Dependencies
@@ -100,6 +95,13 @@ struct ForLoop : public Node {
 
 struct VariableAssignment : public Node {
     VariableAssignment() { type = NODE_VARIABLE_ASSIGNMENT; }
+    std::vector<Node *> children;
+    std::vector<Node *> dependencies;
+    char *identifier;
+};
+
+struct VariableDeclaration : public Node {
+    VariableDeclaration() { type = NODE_VARIABLE_DECLARATION; }
     std::vector<Node *> children;
     std::vector<Node *> dependencies;
     char *identifier;
@@ -260,6 +262,12 @@ static void WriteToFile(Node *node, std::ofstream &ofstream) {
                 WriteToFile(child, ofstream);
             }
         } break;
+        case NODE_VARIABLE_DECLARATION: {
+            VariableDeclaration *i = static_cast<VariableDeclaration *>(node);
+            for (auto child : i->children) {
+                WriteToFile(child, ofstream);
+            }
+        } break;
     }
 }
 
@@ -401,20 +409,37 @@ static TSNode FindVariableAssignmentIdentifierNode(TSNode node, const char *sour
     if (strcmp(type, "identifier") == 0) {
         return node;
     }
+    else if (strcmp(type, "parenthesized_expression") == 0) {
+        uint32_t num_children = ts_node_child_count(node);
+        for (uint32_t i = 0; i < num_children; ++i) {
+            TSNode c = ts_node_child(node, i);
+            const char *t = ts_node_type(c);
+            if (strcmp(t, "(") != 0) {
+                return FindVariableAssignmentIdentifierNode(c, source_code);
+            }
+        }
+    }
+    else if (strcmp(type, "pointer_expression") == 0) {
+        uint32_t num_children = ts_node_child_count(node);
+        for (uint32_t i = 0; i < num_children; ++i) {
+            TSNode c = ts_node_child(node, i);
+            const char *t = ts_node_type(c);
+            if (strcmp(t, "*") != 0 &&
+                strcmp(t, "&") != 0) {
+                return FindVariableAssignmentIdentifierNode(c, source_code);
+            }
+        }
+    }
     else if (strcmp(type, "assignment_expression") == 0 ||
              strcmp(type, "subscript_expression") == 0 ||
              strcmp(type, "field_expression") == 0) {
         return FindVariableAssignmentIdentifierNode(ts_node_child(node, 0), source_code);
     }
-    else {
-        PrintXml(node, source_code);
-        printf("%s\n", type);
-        assert(false);
-        return {};
-    }
-}
 
-static char *FindVariableAssignmentIdentifier(TSNode node, const char *source_code) {
+    PrintXml(node, source_code);
+    printf("FindVariableAssignmentIdentifierNode - %s\n", type);
+    assert(false);
+    return {};
 }
 
 static VariableAssignment *InitVariableAssignment(TSNode ts_node, const char *source_code, uint32_t &prev_end_byte) {
@@ -452,6 +477,11 @@ static FunctionDef *InitFunctionDef(TSNode ts_node, const char *source_code, uin
     FunctionDef *function_def = new FunctionDef;
 
     TSNode function_declarator = FindChild(ts_node, "function_declarator");
+    if (ts_node_is_null(function_declarator)) {
+        TSNode pointer_declarator = FindChild(ts_node, "pointer_declarator");
+        function_declarator = FindChild(pointer_declarator, "function_declarator");
+    }
+
     assert(!ts_node_is_null(function_declarator));
     TSNode identifier = FindChild(function_declarator, "identifier");
     if (ts_node_is_null(identifier)) {
@@ -476,29 +506,107 @@ static FunctionDef *InitFunctionDef(TSNode ts_node, const char *source_code, uin
     return function_def;
 }
 
+static TSNode FindVariableDeclarationIdentifierNode(TSNode node, const char *source_code, bool &abort) {
+    const char *type = ts_node_type(node);
+    if (strcmp(type, "identifier") == 0) {
+        return node;
+    }
+    else if (strcmp(type, "function_declarator") == 0) {
+        abort = true;
+        return {};
+    }
+    else if (strcmp(type, "declaration") == 0) {
+        uint32_t num_children = ts_node_child_count(node);
+        for (uint32_t i = 0; i < num_children; ++i) {
+            TSNode c = ts_node_child(node, i);
+            const char *t = ts_node_type(c);
+            if (strcmp(t, "storage_class_specifier") != 0 &&
+                strcmp(t, "primitive_type") != 0 &&
+                strcmp(t, "type_qualifier") != 0 &&
+                strcmp(t, "sized_type_specifier") != 0 &&
+                strcmp(t, "struct_specifier") != 0 &&
+                strcmp(t, "type_identifier") != 0) {
+                return FindVariableDeclarationIdentifierNode(c, source_code, abort);
+            }
+        }
+    }
+    else if (strcmp(type, "pointer_declarator") == 0) {
+        uint32_t num_children = ts_node_child_count(node);
+        for (uint32_t i = 0; i < num_children; ++i) {
+            TSNode c = ts_node_child(node, i);
+            const char *t = ts_node_type(c);
+            if (strcmp(t, "*") != 0 &&
+                strcmp(t, "type_qualifier") != 0) {
+                return FindVariableDeclarationIdentifierNode(c, source_code, abort);
+            }
+        }
+    }
+    else if (strcmp(type, "array_declarator") == 0 ||
+             strcmp(type, "init_declarator") == 0) {
+        return FindVariableDeclarationIdentifierNode(ts_node_child(node, 0), source_code, abort);
+    }
+
+    PrintXml(node, source_code);
+    printf("FindVariableDeclarationIdentifierNode - %s\n", type);
+    return {};
+}
+
+static VariableDeclaration *InitVariableDeclaration(TSNode ts_node, const char *source_code, uint32_t &prev_end_byte) {
+    bool abort = false;
+    TSNode n = FindVariableDeclarationIdentifierNode(ts_node, source_code, abort);
+    if (abort) return NULL;
+    if (ts_node_is_null(n)) {
+        PrintXml(ts_node, source_code);
+        assert(false);
+    }
+
+    VariableDeclaration *variable_declaration = new VariableDeclaration;
+    variable_declaration->identifier = GetValue(n, source_code);
+
+    uint32_t num_children = ts_node_child_count(ts_node);
+    for (uint32_t i = 0; i < num_children; ++i) {
+        TSNode ts_child = ts_node_child(ts_node, i);
+        Node *child = InitAst(ts_child, source_code, prev_end_byte);
+        variable_declaration->children.push_back(child);
+    }
+
+    return variable_declaration;
+}
+
 static Node *InitAst(TSNode ts_node, const char *source_code, uint32_t &prev_end_byte) {
     // @remember parse it
     const char *node_type = ts_node_type(ts_node);
-    if (strcmp(node_type, "if_statement") == 0) {
+    if (strcmp(node_type, "declaration") == 0) {
+        VariableDeclaration *result = InitVariableDeclaration(ts_node, source_code, prev_end_byte);
+        if (result != NULL) {
+            return static_cast<Node *>(result);
+        }
+        // uint32_t num_children = ts_node_child_count(ts_node);
+        // TSNode second_last_child = ts_node_child(ts_node, num_children - 2);
+        // const char *type = ts_node_type(second_last_child);
+        // if (strcmp(type, "function_declarator") != 0) {
+        //     VariableDeclaration *result = InitVariableDeclaration(ts_node, source_code, prev_end_byte);
+        //     if (result != NULL) {
+        //         return static_cast<Node *>(result);
+        //     }
+        // }
+    }
+    else if (strcmp(node_type, "if_statement") == 0) {
         return static_cast<Node *>(InitIfStatement(ts_node, source_code, prev_end_byte));
     }
-
-    if (strcmp(node_type, "for_statement") == 0) {
+    else if (strcmp(node_type, "for_statement") == 0) {
         return static_cast<Node *>(InitForLoop(ts_node, source_code, prev_end_byte));
     }
-
-    if (strcmp(node_type, "function_definition") == 0) {
+    else if (strcmp(node_type, "function_definition") == 0) {
         return static_cast<Node *>(InitFunctionDef(ts_node, source_code, prev_end_byte));
     }
-
-    if (strcmp(node_type, "expression_statement") == 0) {
+    else if (strcmp(node_type, "expression_statement") == 0) {
         TSNode c1 = ts_node_child(ts_node, 0);
         const char *t1 = ts_node_type(c1);
         if (strcmp(t1, "call_expression") == 0) {
             return static_cast<Node *>(InitCallExpr(ts_node, source_code, prev_end_byte));
         }
-
-        if (strcmp(t1, "assignment_expression") == 0) {
+        else if (strcmp(t1, "assignment_expression") == 0) {
             return static_cast<Node *>(InitVariableAssignment(ts_node, source_code, prev_end_byte));
             // TSNode c2 = ts_node_child(c1, 0);
             // const char *t2 = ts_node_type(c2);
@@ -557,6 +665,9 @@ static std::vector<Node *> *GetDependencies(Node *node) {
         case NODE_VARIABLE_ASSIGNMENT: {
             return &static_cast<VariableAssignment *>(node)->dependencies;
         }
+        case NODE_VARIABLE_DECLARATION: {
+            return &static_cast<VariableDeclaration *>(node)->dependencies;
+        }
         default: return NULL;
     }
 }
@@ -573,6 +684,12 @@ static void AddDependencies(std::vector<Node *> &list, Node *node) {
 
 static void FindDependencies(Node *node, std::vector<Node *> &nodes_to_reduce) {
     // @remember: add dependency and add to nodes_to_reduce
+
+    std::vector<Node *> variable_declarations;
+    FindChildren(node, NODE_VARIABLE_DECLARATION, variable_declarations);
+    for (auto variable_declaration : variable_declarations) {
+        nodes_to_reduce.push_back(variable_declaration);
+    }
 
     std::vector<Node *> function_defs;
     FindChildren(node, NODE_FUNCTION_DEF, function_defs);
@@ -764,20 +881,20 @@ void GeneralizedBinaryReduction(TSNode ts_root_node, const char *file_name, cons
     std::vector<Node *> function_defs;
     FindChildren(root_node, NODE_FUNCTION_DEF, function_defs);
 
-    FunctionDef *main_function = NULL;
-    for (size_t i = 0; i < function_defs.size(); ++i) {
-        FunctionDef *f = static_cast<FunctionDef *>(function_defs[i]);
-        if (strcmp(f->identifier, "main") == 0) {
-            main_function = f;
-            break;
-        }
-    }
+    // FunctionDef *main_function = NULL;
+    // for (size_t i = 0; i < function_defs.size(); ++i) {
+    //     FunctionDef *f = static_cast<FunctionDef *>(function_defs[i]);
+    //     if (strcmp(f->identifier, "main") == 0) {
+    //         main_function = f;
+    //         break;
+    //     }
+    // }
 
     // Add [main()!code] since we know it is needed for the program to be valid
-    assert(main_function != NULL);
+    // assert(main_function != NULL);
     std::vector<Node *> learned_set;
-    learned_set.push_back(static_cast<Node *>(main_function->code));
-    AddDependencies(learned_set, main_function->code);
+    // learned_set.push_back(static_cast<Node *>(main_function->code));
+    // AddDependencies(learned_set, main_function->code);
 
     std::unordered_map<Node *, bool> is_visited;
     for (auto node : nodes_to_reduce) {
